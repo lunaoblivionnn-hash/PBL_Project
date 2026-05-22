@@ -1,0 +1,79 @@
+body { background-color: #f8f9fa; }
+
+/* SIDEBAR & DASHBOARD */
+.sidebar { 
+    min-height: calc(100vh - 56px); 
+    background-color: #fff; 
+    border-right: 1px solid #dee2e6; 
+}
+.sidebar-link { 
+    color: #333; padding: 10px 20px; display: block; 
+    text-decoration: none; border-radius: 5px; margin: 5px 10px; 
+}
+.sidebar-link:hover, .sidebar-link.active { 
+    background-color: #e9ecef; color: #0d6efd; font-weight: bold; 
+}
+.gamification-card { 
+    background: linear-gradient(135deg, #0d6efd, #0dcaf0); 
+    color: white; border: none; 
+}
+.course-card img { height: 150px; object-fit: cover; }
+
+/* MODE DAFTAR (LIST VIEW) */
+#courseContainer.list-mode { display: block; }
+#courseContainer.list-mode .course-col { width: 100%; padding: 0; }
+#courseContainer.list-mode .course-card { 
+    flex-direction: row; align-items: center; border: none; 
+    border-bottom: 1px solid #dee2e6; border-radius: 0; 
+    box-shadow: none !important; padding: 15px 0; 
+}
+#courseContainer.list-mode .card-img-top { 
+    width: 250px; height: 120px; object-fit: cover; 
+    border-radius: 8px; margin-right: 25px; 
+}
+#courseContainer.list-mode .card-body { 
+    padding: 0; display: flex; flex-direction: column; 
+    justify-content: center; position: relative; width: 100%;
+}
+#courseContainer.list-mode .card-footer,
+#courseContainer.list-mode .progress,
+#courseContainer.list-mode .card-body > .d-flex.justify-content-between.align-items-start.mb-2 { 
+    display: none !important; 
+}
+#courseContainer.list-mode .card-title { 
+    color: #0d6efd; text-transform: uppercase; font-size: 1.1rem; 
+    font-weight: 400; margin-bottom: 2px; 
+}
+#courseContainer.list-mode .card-text { 
+    color: #333 !important; font-size: 0.9rem; margin-bottom: 20px !important; 
+}
+
+/* TOMBOL BINTANG KANAN MODE DAFTAR */
+.list-bintang-aksi { display: none; border: none; background: transparent;}
+#courseContainer.list-mode .list-bintang-aksi {
+    display: flex; position: absolute; right: 15px; top: 50%; transform: translateY(-50%); 
+    width: 38px; height: 38px; border-radius: 50%; background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1); justify-content: center; align-items: center; z-index: 5;
+}
+#courseContainer.list-mode .list-bintang-aksi:hover { background-color: #f8f9fa; }
+
+/* UTILITY LAINNYA */
+.d-none-filter { display: none !important; }
+.btn-outline-secondary.bg-white:hover {
+    background-color: #6c757d !important; color: #ffffff !important; border-color: #6c757d !important;
+}
+.hover-bg-light { transition: background-color 0.2s; }
+.hover-bg-light:hover { background-color: #f8f9fa; }
+
+/* FOOTER */
+footer {
+    background-color: #212529; color: #ced4da; padding: 60px 0 30px 0;
+    margin-top: 50px; border-top: 4px solid #0d6efd;
+}
+footer h5 { color: #ffffff; font-weight: bold; margin-bottom: 20px; }
+footer a { color: #ced4da; text-decoration: none; transition: 0.3s; }
+footer a:hover { color: #0d6efd; padding-left: 5px; }
+.footer-logo { width: 60px; margin-bottom: 15px; filter: drop-shadow(0 0 5px rgba(255,255,255,0.2)); }
+.social-icons a { font-size: 1.5rem; margin-right: 15px; display: inline-block; }
+.social-icons a:hover { transform: translateY(-3px); }
+.copyright { border-top: 1px solid #343a40; padding-top: 20px; margin-top: 40px; font-size: 0.85rem; }
