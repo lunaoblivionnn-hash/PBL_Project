@@ -20,7 +20,7 @@ $query_mapel = mysqli_query($koneksi, "
     SELECT m.*, g.NamaGuru 
     FROM mapel m 
     LEFT JOIN guru g ON m.IDGuru = g.IDGuru 
-    WHERE m.Kelas = '$kelas' 
+    WHERE m.Kelas LIKE '%\"$kelas\"%' 
     ORDER BY m.TahunAjaran DESC, m.NamaMapel ASC
 ");
 $jumlah_mapel = mysqli_num_rows($query_mapel);
@@ -140,14 +140,32 @@ $jumlah_mapel = mysqli_num_rows($query_mapel);
                             <div class="col-12 col-md-6 col-xl-4">
                                 <div class="card mapel-card h-100">
                                     
-                                    <div class="mapel-img-container">
-                                        <div class="tahun-badge"><?= $row['TahunAjaran'] ?></div>
-                                        <?php if(!empty($row['Gambar']) && file_exists("../image/mapel/" . $row['Gambar'])): ?>
-                                            <img src="../image/mapel/<?= $row['Gambar'] ?>" alt="Cover Mapel">
-                                        <?php else: ?>
-                                            <i class="bi bi-journal-bookmark-fill default-icon"></i>
-                                        <?php endif; ?>
-                                    </div>
+                                <div class="mapel-img-container">
+                                    <div class="tahun-badge"><?= $row['TahunAjaran'] ?></div>
+                                    <?php 
+                                    // Generator Gambar Gradien Otomatis (SVG)
+                                    $nama_mapel_svg = htmlspecialchars($row['NamaMapel']);
+                                    $gradients = [
+                                        ['#4f46e5', '#06b6d4'], // Indigo ke Cyan
+                                        ['#f12711', '#f5af19'], // Merah ke Kuning
+                                        ['#834d9b', '#d04ed6'], // Ungu ke Pink
+                                        ['#11998e', '#38ef7d'], // Hijau Alam
+                                        ['#fc4a1a', '#f7b733']  // Oranye Matahari
+                                    ];
+                                    $idx = strlen($row['NamaMapel']) % 5; 
+                                    $c1 = $gradients[$idx][0]; $c2 = $gradients[$idx][1];
+                                    
+                                    $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="300"><defs><linearGradient id="g'.$idx.'" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="'.$c1.'"/><stop offset="100%" stop-color="'.$c2.'"/></linearGradient></defs><rect width="100%" height="100%" fill="url(#g'.$idx.')"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="38" font-weight="bold">'.$nama_mapel_svg.'</text></svg>';
+                                    
+                                    $cover_img = 'data:image/svg+xml;base64,' . base64_encode($svg);
+
+                                    // Timpa dengan gambar asli jika admin sudah menguploadnya
+                                    if(!empty($row['Gambar']) && file_exists("../image/mapel/" . $row['Gambar'])) {
+                                        $cover_img = "../image/mapel/" . $row['Gambar'];
+                                    }
+                                    ?>
+                                    <img src="<?= $cover_img ?>" alt="Cover Mapel">
+                                </div>
 
                                     <div class="card-body p-4 d-flex flex-column">
                                         <h5 class="fw-bold mb-1 text-dark"><?= $row['NamaMapel'] ?></h5>
