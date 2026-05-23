@@ -1,193 +1,255 @@
+<?php
+session_start();
+require '../login/koneksi.php';
+
+// Pastikan yang masuk adalah akun dengan role siswa
+if(!isset($_SESSION['role']) || $_SESSION['role'] != 'siswa'){
+    header("Location: ../login/login.php"); exit;
+}
+
+$id_user = $_SESSION['IDUser'] ?? '';
+$id_mapel = mysqli_real_escape_string($koneksi, $_GET['id_mapel'] ?? '');
+
+if(empty($id_mapel)){
+    header("Location: siswa.php"); exit;
+}
+
+// 1. Ambil data siswa
+$query_siswa = mysqli_query($koneksi, "SELECT * FROM siswa WHERE IDUser='$id_user'");
+$siswa = mysqli_fetch_assoc($query_siswa);
+$id_siswa = $siswa['IDSiswa'] ?? '';
+
+// 2. Ambil detail mapel
+$query_mapel = mysqli_query($koneksi, "SELECT m.*, g.NamaGuru FROM mapel m LEFT JOIN guru g ON m.IDGuru = g.IDGuru WHERE m.IDMapel='$id_mapel'");
+if(mysqli_num_rows($query_mapel) == 0){
+    header("Location: siswa.php"); exit;
+}
+$mapel = mysqli_fetch_assoc($query_mapel);
+
+// 3. Ambil daftar materi
+$query_materi = mysqli_query($koneksi, "SELECT * FROM materi WHERE IDMapel='$id_mapel'");
+
+// 4. Ambil daftar tugas
+$query_tugas = mysqli_query($koneksi, "SELECT * FROM tugas WHERE IDMapel='$id_mapel'");
+
+// 5. Ambil daftar kuis
+// $query_quiz = mysqli_query($koneksi, "SELECT * FROM quiz WHERE IDMapel='$id_mapel'");
+?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Materi Mapel - LMS Siswa</title>
+    <title>Detail Kelas - LMS SMKN 1 Wongsorejo</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="style.css">
-</head>
-<body class="bg-light">
+    
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #dc3545, #9b1c26);
+            --card-gradient: linear-gradient(135deg, #1e1e2f, #111119);
+        }
+        
+        body { 
+            background-color: #f4f6f9; 
+            color: #333; 
+            transition: all 0.3s ease; 
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+        
+        /* Navbar Utama Tema Merah Gradasi */
+        .navbar-custom { 
+            background: var(--primary-gradient); 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
+        }
+        
+        /* Hero Header Menggunakan Card Gradient Gelap Dashboard */
+        .hero-profile-card { 
+            background: var(--card-gradient); 
+            color: white; 
+            border: none; 
+            border-radius: 20px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15); 
+            overflow: hidden; 
+            position: relative; 
+        }
+        
+        .hero-profile-card::before { 
+            content: ''; 
+            position: absolute; 
+            top: -50%; 
+            right: -20%; 
+            width: 300px; 
+            height: 300px; 
+            background: rgba(220, 53, 69, 0.15); 
+            filter: blur(50px); 
+            border-radius: 50%; 
+        }
 
-    <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom py-2 sticky-top">
-        <div class="container-fluid px-4">
-            <a class="navbar-brand fw-bold d-flex align-items-center" href="index.html">
-                <img src="image/logosmk.png" alt="Logo" width="35" height="35" class="me-3">
+        /* Card List Box Putih Bersih Rapi */
+        .mapel-card { 
+            border: none; 
+            border-radius: 16px; 
+            background-color: #fff !important; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.04); 
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); 
+            overflow: hidden; 
+        }
+        
+        .mapel-card:hover { 
+            transform: translateY(-4px); 
+            box-shadow: 0 12px 24px rgba(220,53,69,0.12); 
+        }
+
+        /* Memaksa teks di dalam kartu agar tetap berwarna gelap saat light mode */
+        .mapel-card h6, 
+        .mapel-card .text-dark, 
+        .mapel-card a.text-primary {
+            color: #212529 !important;
+        }
+
+        /* List Row Item di dalam Card */
+        .item-list-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            border-bottom: 1px solid #efefef;
+        }
+
+        .item-list-row:last-child {
+            border-bottom: none;
+        }
+
+        .empty-state-box { 
+            background: #fff; 
+            border-radius: 20px; 
+            padding: 3rem 2rem; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.03); 
+        }
+
+        /* Dark Mode Compatibility Support */
+        [data-bs-theme="dark"] body { background-color: #121212; color: #e0e0e0; }
+        [data-bs-theme="dark"] .mapel-card { background-color: #1e1e1e !important; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        [data-bs-theme="dark"] .mapel-card h6, 
+        [data-bs-theme="dark"] .mapel-card .text-dark { color: #e0e0e0 !important; }
+        [data-bs-theme="dark"] .mapel-card a.text-primary { color: #0d6efd !important; }
+        [data-bs-theme="dark"] .empty-state-box { background-color: #1e1e1e; }
+        [data-bs-theme="dark"] .item-list-row { border-color: #2d2d2d; }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom sticky-top py-2">
+        <div class="container px-4">
+            <a class="navbar-brand fw-bold d-flex align-items-center" href="siswa.php">
+                <span class="fs-5 tracking-wide">🎓 LMS SMKN 1 Wongsorejo</span>
             </a>
             
-            <ul class="navbar-nav me-auto d-flex flex-row gap-4">
-                <li class="nav-item"><a class="nav-link text-dark py-0" href="index.html">Beranda</a></li>
-                <li class="nav-item"><a class="nav-link text-dark py-0" href="index.html">Kursusku</a></li>
-            </ul>
-
-            <div class="d-flex align-items-center gap-4">
-                <a href="#" class="text-dark"><i class="bi bi-bell fs-5"></i></a>
-                <a href="#" class="text-dark"><i class="bi bi-chat-left-text fs-5"></i></a>
-                <div class="dropdown">
-                    <a class="text-dark text-decoration-none dropdown-toggle d-flex align-items-center" href="#" data-bs-toggle="dropdown">
-                        <span class="badge bg-secondary rounded-circle p-2 me-1">MP</span>
-                    </a>
+            <div class="d-flex align-items-center">
+                <div class="text-end text-white">
+                    <h6 class="mb-0 fw-bold small text-nowrap"><?= htmlspecialchars($siswa['NamaSiswa'] ?? 'Siswa') ?></h6>
+                    <small class="text-white-50 text-uppercase d-block" style="font-size: 0.65rem; letter-spacing: 0.5px;"><?= htmlspecialchars($siswa['Kelas'] ?? '') ?></small>
                 </div>
             </div>
         </div>
     </nav>
 
-    <nav class="navbar navbar-expand navbar-dark bg-primary menu-mapel-nav">
-        <div class="container-fluid px-5">
-            <ul class="navbar-nav gap-3">
-                <li class="nav-item"><a class="nav-link active fw-bold border-bottom border-3 border-white" href="#">Kursus</a></li>
-                <li class="nav-item"><a class="nav-link" href="#">Peserta</a></li>
-                <li class="nav-item"><a class="nav-link" href="#">Nilai</a></li>
-                <li class="nav-item"><a class="nav-link" href="#">Kompetensi</a></li>
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Selengkapnya</a>
-                </li>
-            </ul>
-        </div>
-    </nav>
-
-    <div class="container-fluid">
+    <div class="container py-4">
         
-        <div class="row konten-materi d-none" id="materi-akuntansi-pemerintah">
+        <div class="mb-3">
+            <a href="siswa.php" class="btn btn-sm btn-white bg-white border text-dark shadow-sm rounded-pill px-3 fw-semibold">
+                <i class="bi bi-arrow-left me-1 text-danger"></i> Kembali ke Dashboard
+            </a>
+        </div>
+        
+        <div class="card hero-profile-card p-4 mb-5">
+            <div class="position-relative z-1 py-2">
+                <span class="badge bg-danger mb-2 px-3 py-2 rounded-pill small fw-bold" style="background-color: #dc3545 !important;">RUANG KELAS AKTIF</span>
+                <h2 class="fw-bold text-white mb-1"><?= htmlspecialchars($mapel['NamaMapel']) ?></h2>
+                <p class="text-white-50 mb-0"><i class="bi bi-person-badge me-2"></i>Guru Pengampu: <strong><?= htmlspecialchars($mapel['NamaGuru'] ?? 'Belum Ditentukan') ?></strong></p>
+            </div>
+        </div>
+
+        <div class="row g-4">
             
-            <nav class="col-md-4 col-lg-3 d-none d-md-block bg-white border-end py-3 sidebar-materi" style="min-height: calc(100vh - 110px); overflow-y: auto;">
-                <div class="mb-3 px-3">
-                    <i class="bi bi-x-lg fs-5" style="cursor:pointer;" title="Tutup sidebar"></i>
-                </div>
+            <div class="col-lg-6">
+                <h5 class="fw-bold mb-3 d-flex align-items-center text-dark">
+                    <i class="bi bi-file-earmark-text-fill text-danger me-2"></i> Materi Pembelajaran
+                </h5>
                 
-                <div class="list-group list-group-flush">
-                    <a href="#" class="list-group-item list-group-item-action bg-primary text-white border-0 rounded mx-2 mb-1 fw-semibold">
-                        <i class="bi bi-chevron-right me-2 small"></i> Umum
-                    </a>
-                    <a href="#" class="list-group-item list-group-item-action border-0 mb-1 fw-semibold text-dark">
-                        <i class="bi bi-chevron-down me-2 small text-muted"></i> Pertemuan 1: Konsep Dasar
-                    </a>
-                    
-                    <div class="ps-4 mb-2">
-                        <a href="#" class="d-block text-decoration-none text-muted small py-2"><i class="bi bi-circle-fill text-primary me-2"></i>Modul 1: Karakteristik Pemda</a>
-                        <a href="#" class="d-block text-decoration-none text-muted small py-2"><i class="bi bi-circle-fill text-success me-2"></i>Forum: Pemda vs Swasta</a>
-                    </div>
-
-                    <a href="#" class="list-group-item list-group-item-action border-0 mb-1">
-                        <i class="bi bi-chevron-right me-2 small text-muted"></i> Pertemuan 2: Jurnal APBD
-                    </a>
-                </div>
-            </nav>
-
-            <main class="col-md-8 col-lg-9 px-md-5 py-5">
-                <h2 class="judulBesarMapel fw-bold mb-4 text-uppercase text-dark" style="font-size: 2rem;">AKUNTANSI PEMERINTAH</h2>
-
-                <div class="bg-white p-5 rounded shadow-sm border">
-                    <div class="accordion accordion-flush" id="accordionAP">
-                        
-                        <div class="accordion-item mb-4 border-0 border-bottom">
-                            <h2 class="accordion-header position-relative">
-                                <button class="accordion-button fs-4 fw-bold text-dark px-0 bg-transparent shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collapseUmum-AP">
-                                    <i class="bi bi-chevron-down me-3 fs-5"></i> Umum
-                                </button>
-                            </h2>
-                            <div id="collapseUmum-AP" class="accordion-collapse collapse show">
-                                <div class="accordion-body px-0 pt-3 pb-0 ms-5">
-                                    <div class="border rounded p-4 mb-3">
-                                        <div class="d-flex justify-content-between align-items-start">
-                                            <div class="d-flex align-items-center">
-                                                <div class="bg-primary text-white rounded d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
-                                                    <i class="bi bi-file-earmark-text fs-3"></i>
-                                                </div>
-                                                <a href="#" class="text-primary text-decoration-none fs-6 fw-semibold">Silabus Mata Pelajaran</a>
-                                            </div>
-                                            <button class="btn btn-outline-secondary btn-sm rounded-1 px-3">Tandai selesai</button>
-                                        </div>
+                <div class="card mapel-card p-2">
+                    <?php if(mysqli_num_rows($query_materi) == 0): ?>
+                        <p class="text-muted small text-center my-4">Belum ada file materi dibagikan.</p>
+                    <?php else: ?>
+                        <?php while($materi = mysqli_fetch_assoc($query_materi)): ?>
+                            <div class="item-list-row">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="p-2 bg-danger bg-opacity-10 text-danger rounded fs-4">
+                                        <i class="bi bi-file-earmark-pdf"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0 text-dark small fw-bold"><?= htmlspecialchars($materi['JudulMateri']) ?></h6>
+                                        <small class="text-muted" style="font-size:0.75rem;">Format: PDF Document</small>
                                     </div>
                                 </div>
+                                <a href="../uploads/materi/<?= htmlspecialchars($materi['FileMateri']) ?>" target="_blank" class="btn btn-sm btn-outline-danger rounded-pill px-3" style="font-size:0.75rem;">
+                                    <i class="bi bi-download"></i> Unduh
+                                </a>
                             </div>
-                        </div>
-
-                        <div class="accordion-item mb-4 border-0 border-bottom">
-                            <h2 class="accordion-header">
-                                <button class="accordion-button collapsed fs-4 fw-bold text-dark px-0 bg-transparent shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSatu-AP">
-                                    <i class="bi bi-chevron-right me-3 fs-5"></i> Pertemuan 1: Konsep Dasar Akuntansi Pemda
-                                </button>
-                            </h2>
-                            <div id="collapseSatu-AP" class="accordion-collapse collapse">
-                                <div class="accordion-body px-0 pt-3 ms-5 text-muted">Isi materi pertemuan 1 akan tampil di sini.</div>
-                            </div>
-                        </div>
-
-                    </div>
+                        <?php endwhile; ?>
+                    <?php endif; ?>
                 </div>
-            </main>
-        </div>
+            </div>
 
-
-        <div class="row konten-materi d-none" id="materi-matematika">
-            
-            <nav class="col-md-4 col-lg-3 d-none d-md-block bg-white border-end py-3 sidebar-materi" style="min-height: calc(100vh - 110px); overflow-y: auto;">
-                <div class="mb-3 px-3">
-                    <i class="bi bi-x-lg fs-5" style="cursor:pointer;" title="Tutup sidebar"></i>
-                </div>
-                <div class="list-group list-group-flush">
-                    <a href="#" class="list-group-item list-group-item-action bg-primary text-white border-0 rounded mx-2 mb-1 fw-semibold">
-                        <i class="bi bi-chevron-right me-2 small"></i> Umum
-                    </a>
-                    <a href="#" class="list-group-item list-group-item-action border-0 mb-1 fw-semibold text-dark">
-                        <i class="bi bi-chevron-down me-2 small text-muted"></i> Pertemuan 1: Operasi Matriks
-                    </a>
-                    <div class="ps-4 mb-2">
-                        <a href="#" class="d-block text-decoration-none text-muted small py-2"><i class="bi bi-circle-fill text-primary me-2"></i>Modul 1: Penjumlahan Matriks</a>
-                    </div>
-                </div>
-            </nav>
-
-            <main class="col-md-8 col-lg-9 px-md-5 py-5">
-                <h2 class="judulBesarMapel fw-bold mb-4 text-uppercase text-dark" style="font-size: 2rem;">MATEMATIKA</h2>
-
-                <div class="bg-white p-5 rounded shadow-sm border">
-                    <div class="accordion accordion-flush" id="accordionMTK">
-                        
-                        <div class="accordion-item mb-4 border-0 border-bottom">
-                            <h2 class="accordion-header position-relative">
-                                <button class="accordion-button collapsed fs-4 fw-bold text-dark px-0 bg-transparent shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collapseUmum-MTK">
-                                    <i class="bi bi-chevron-right me-3 fs-5"></i> Umum
-                                </button>
-                            </h2>
-                            <div id="collapseUmum-MTK" class="accordion-collapse collapse">
-                                <div class="accordion-body px-0 pt-3 ms-5 text-muted">Silabus Matematika.</div>
-                            </div>
-                        </div>
-
-                        <div class="accordion-item mb-4 border-0 border-bottom">
-                            <h2 class="accordion-header">
-                                <button class="accordion-button fs-4 fw-bold text-dark px-0 bg-transparent shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSatu-MTK">
-                                    <i class="bi bi-chevron-down me-3 fs-5"></i> Pertemuan 1: Operasi Matriks
-                                </button>
-                            </h2>
-                            <div id="collapseSatu-MTK" class="accordion-collapse collapse show">
-                                <div class="accordion-body px-0 pt-3 pb-0 ms-5">
-                                    <div class="border rounded p-4 mb-3">
-                                        <div class="d-flex justify-content-between align-items-start">
-                                            <div class="d-flex align-items-center">
-                                                <div class="bg-primary text-white rounded d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
-                                                    <i class="bi bi-file-earmark-pdf fs-3"></i>
-                                                </div>
-                                                <a href="#" class="text-primary text-decoration-none fs-6 fw-semibold">Modul 1: Penjumlahan & Pengurangan Matriks</a>
-                                            </div>
-                                            <button class="btn btn-outline-secondary btn-sm rounded-1 px-3">Tandai selesai</button>
-                                        </div>
-                                    </div>
+            <div class="col-lg-6">
+                
+                <h5 class="fw-bold mb-3 d-flex align-items-center text-dark">
+                    <i class="bi bi-journal-check text-danger me-2"></i> Tugas Pembelajaran
+                </h5>
+                <div class="card mapel-card p-2 mb-4">
+                    <?php if(mysqli_num_rows($query_tugas) == 0): ?>
+                        <p class="text-muted small text-center my-4">Tidak ada tugas terdaftar.</p>
+                    <?php else: ?>
+                        <?php while($tugas = mysqli_fetch_assoc($query_tugas)): ?>
+                            <div class="item-list-row">
+                                <div>
+                                    <h6 class="mb-0 text-dark small fw-bold"><?= htmlspecialchars($tugas['JudulTugas']) ?></h6>
+                                    <small class="text-danger" style="font-size:0.75rem;"><i class="bi bi-clock"></i> Batas: <?= date('d M, H:i', strtotime($tugas['Deadline'])) ?></small>
                                 </div>
+                                <a href="kerjakan_tugas.php?id_tugas=<?= $tugas['IDTugas'] ?>" class="btn btn-sm btn-danger text-white rounded-pill fw-semibold px-3" style="background: linear-gradient(135deg, #dc3545, #9b1c26); border: none; font-size:0.75rem;">
+                                    Buka Tugas
+                                </a>
                             </div>
-                        </div>
-
-                    </div>
+                        <?php endwhile; ?>
+                    <?php endif; ?>
                 </div>
-            </main>
-        </div>
 
+                <h5 class="fw-bold mb-3 d-flex align-items-center text-dark">
+                    <i class="bi bi-trophy-fill text-danger me-2"></i> Kuis & Evaluasi
+                </h5>
+                <div class="card mapel-card p-2">
+                    <?php if(mysqli_num_rows($query_quiz) == 0): ?>
+                        <p class="text-muted small text-center my-4">Tidak ada kuis aktif saat ini.</p>
+                    <?php else: ?>
+                        <?php while($quiz = mysqli_fetch_assoc($query_quiz)): ?>
+                            <div class="item-list-row">
+                                <div>
+                                    <h6 class="mb-0 text-dark small fw-bold"><?= htmlspecialchars($quiz['JudulQuiz']) ?></h6>
+                                    <small class="text-muted" style="font-size:0.75rem;"><i class="bi bi-hourglass-split"></i> Durasi: <?= $quiz['Durasi'] ?> Menit</small>
+                                </div>
+                                <a href="kerjakan_quiz.php?id_quiz=<?= $quiz['IDQuiz'] ?>" class="btn btn-sm btn-warning text-dark rounded-pill fw-bold px-3" style="font-size:0.75rem;">
+                                    Mulai Kuis
+                                </a>
+                            </div>
+                        <?php endwhile; ?>
+                    <?php endif; ?>
+                </div>
+
+            </div>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="action.js"></script>
 </body>
 </html>
