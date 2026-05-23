@@ -38,6 +38,10 @@ if (isset($_POST['login'])) {
             // TAHAP 3: BERSIHKAN MEMORI LAMA & SIMPAN DATA BARU
             // =========================================================
             session_unset(); 
+
+            $id_user_login = $data['IDUser'];
+            
+            mysqli_query($koneksi, "UPDATE users SET LastAccess = NOW() WHERE IDUser = '$id_user_login'");
             
             $_SESSION['IDUser']   = $data['IDUser']; 
             $_SESSION['username'] = $data['Username'];
