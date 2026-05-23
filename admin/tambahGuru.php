@@ -114,29 +114,26 @@
                                                 
                                                 <div class="row g-3 align-items-start">
                                                     <?php
-                                                    // AMBIL DATA REAL DARI DATABASE
-                                                    $q_kelas_db = mysqli_query($koneksi, "SELECT DISTINCT Kelas FROM mapel ORDER BY Kelas ASC");
-                                                    
-                                                    if(mysqli_num_rows($q_kelas_db) == 0):
-                                                    ?>
-                                                        <div class="col-12">
-                                                            <div class="alert alert-warning small mb-0"><i class="bi bi-info-circle me-2"></i>Belum ada data mata pelajaran di database. Buat mata pelajaran terlebih dahulu di menu Admin.</div>
-                                                        </div>
-                                                    <?php 
-                                                    else:
-                                                        while($row_k = mysqli_fetch_assoc($q_kelas_db)): 
-                                                            $kelas = $row_k['Kelas'];
-                                                            $id_safe = preg_replace('/[^a-zA-Z0-9]/', '', $kelas); 
-                                                            
-                                                            // Ambil mapel khusus untuk kelas ini
-                                                            $q_mapel_db = mysqli_query($koneksi, "SELECT DISTINCT NamaMapel FROM mapel WHERE Kelas = '$kelas' ORDER BY NamaMapel ASC");
+                                                    // 1. Siapkan daftar kelas paten
+                                                    $kelas_list = ['X AKL 1', 'X AKL 2', 'XI AKL 1', 'XI AKL 2', 'XII AKL 1', 'XII AKL 2'];
+                                                    $ada_mapel_aktif = false;
+
+                                                    foreach($kelas_list as $kelas): 
+                                                        $id_safe = preg_replace('/[^a-zA-Z0-9]/', '', $kelas); 
+
+                                                        // CARI MAPEL YANG MENGANDUNG KELAS INI (Gunakan LIKE karena formatnya JSON)
+                                                        $q_mapel_db = mysqli_query($koneksi, "SELECT DISTINCT NamaMapel FROM mapel WHERE Kelas LIKE '%\"$kelas\"%' ORDER BY NamaMapel ASC");
+
+                                                        // HANYA TAMPILKAN KOTAK KELAS JIKA ADA MAPEL DI DALAMNYA
+                                                        if(mysqli_num_rows($q_mapel_db) > 0):
+                                                            $ada_mapel_aktif = true;
                                                     ?>
                                                     <div class="col-md-6">
-                                                        <div class="card border border-secondary-subtle shadow-sm">
+                                                        <div class="card border border-secondary-subtle shadow-sm h-100">
                                                             <div class="card-body p-3">
                                                                 <div class="form-check form-switch border-bottom pb-2 mb-2">
-                                                                    <input class="form-check-input" type="checkbox" name="kelas_diampu[]" value="<?= $kelas ?>" id="switch_<?= $id_safe ?>" onchange="toggleMapel('<?= $id_safe ?>')">
-                                                                    <label class="form-check-label fw-bold text-danger" style="cursor:pointer;" for="switch_<?= $id_safe ?>"><?= $kelas ?></label>
+                                                                    <input class="form-check-input switch-kelas" type="checkbox" name="kelas_diampu[]" value="<?= $kelas ?>" id="switch_<?= $id_safe ?>" onchange="toggleMapel('<?= $id_safe ?>')">
+                                                                    <label class="form-check-label fw-bold text-danger ms-1" style="cursor:pointer;" for="switch_<?= $id_safe ?>"><?= $kelas ?></label>
                                                                 </div>
 
                                                                 <div class="mapel-box d-none" id="box_<?= $id_safe ?>">
@@ -163,9 +160,16 @@
                                                         </div>
                                                     </div>
                                                     <?php 
-                                                        endwhile;
-                                                    endif; 
+                                                        endif;
+                                                    endforeach; 
+
+                                                    // Jika tidak ada satu pun mapel di database yang terhubung ke kelas
+                                                    if(!$ada_mapel_aktif):
                                                     ?>
+                                                        <div class="col-12">
+                                                            <div class="alert alert-warning small mb-0"><i class="bi bi-info-circle me-2"></i>Belum ada mata pelajaran yang didaftarkan ke kelas manapun.</div>
+                                                        </div>
+                                                    <?php endif; ?>
                                                 </div>
                                             </div>
                                         </div>
