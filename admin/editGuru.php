@@ -117,24 +117,24 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
                             <h6 class="fw-bold text-muted mb-3 pb-2 border-bottom">HAK AKSES KELAS & MATA PELAJARAN</h6>
                             <div class="p-4 bg-light border rounded-3 mb-4">
                                 <div class="row g-3 align-items-start">
-                                    <?php
-                                    // BACA REAL-TIME DARI DATABASE
-                                    $q_kelas_db = mysqli_query($koneksi, "SELECT DISTINCT Kelas FROM mapel ORDER BY Kelas ASC");
-                                    
-                                    if(mysqli_num_rows($q_kelas_db) == 0):
-                                    ?>
-                                        <div class="col-12"><div class="alert alert-warning small mb-0">Belum ada mata pelajaran.</div></div>
-                                    <?php 
-                                    else:
-                                        while($row_k = mysqli_fetch_assoc($q_kelas_db)): 
-                                            $kelas = $row_k['Kelas'];
-                                            $id_safe = preg_replace('/[^a-zA-Z0-9]/', '', $kelas); 
-                                            
-                                            // LOGIKA AUTO-CHECK JIKA GURU INI SUDAH MENGAMPU KELAS INI
-                                            $is_kelas_checked = isset($mapel_guru_terpilih[$kelas]) ? 'checked' : '';
-                                            $box_display = isset($mapel_guru_terpilih[$kelas]) ? '' : 'd-none';
+                                <?php
+                                    // 1. Siapkan daftar kelas paten
+                                    $kelas_list = ['X AKL 1', 'X AKL 2', 'XI AKL 1', 'XI AKL 2', 'XII AKL 1', 'XII AKL 2'];
+                                    $ada_mapel_aktif = false;
 
-                                            $q_mapel_db = mysqli_query($koneksi, "SELECT DISTINCT NamaMapel FROM mapel WHERE Kelas = '$kelas' ORDER BY NamaMapel ASC");
+                                    foreach($kelas_list as $kelas): 
+                                        $id_safe = preg_replace('/[^a-zA-Z0-9]/', '', $kelas); 
+                                        
+                                        // 2. LOGIKA AUTO-CHECK JIKA GURU INI SUDAH MENGAMPU KELAS INI
+                                        $is_kelas_checked = isset($mapel_guru_terpilih[$kelas]) ? 'checked' : '';
+                                        $box_display = isset($mapel_guru_terpilih[$kelas]) ? '' : 'd-none';
+
+                                        // 3. CARI MAPEL YANG MENGANDUNG KELAS INI (Gunakan LIKE karena formatnya JSON)
+                                        $q_mapel_db = mysqli_query($koneksi, "SELECT DISTINCT NamaMapel FROM mapel WHERE Kelas LIKE '%\"$kelas\"%' ORDER BY NamaMapel ASC");
+
+                                        // 4. HANYA TAMPILKAN KOTAK KELAS JIKA ADA MAPEL DI DALAMNYA
+                                        if(mysqli_num_rows($q_mapel_db) > 0):
+                                            $ada_mapel_aktif = true;
                                     ?>
                                     <div class="col-md-6">
                                         <div class="card border border-secondary-subtle shadow-sm h-100">
@@ -169,9 +169,14 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
                                         </div>
                                     </div>
                                     <?php 
-                                        endwhile;
-                                    endif; 
+                                        endif;
+                                    endforeach; 
+
+                                    // Jika tidak ada satu pun mapel di database yang terhubung ke kelas
+                                    if(!$ada_mapel_aktif):
                                     ?>
+                                        <div class="col-12"><div class="alert alert-warning small mb-0">Belum ada mata pelajaran yang didaftarkan ke kelas manapun.</div></div>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                             
