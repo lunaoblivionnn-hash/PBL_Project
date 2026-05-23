@@ -33,47 +33,45 @@ if(isset($maint['Nilai']) && $maint['Nilai'] == '1') {
     exit; 
 }
 
-// 4. AMBIL DATA PROFIL GURU
+// 4. AMBIL DATA PROFIL GURU & HAK AKSES MAPEL (JSON)
 $query_guru = mysqli_query($koneksi, "SELECT * FROM guru WHERE IDUser = '$id_user'");
 if ($query_guru && mysqli_num_rows($query_guru) > 0) {
-    $guru      = mysqli_fetch_assoc($query_guru);
-    $id_guru   = $guru['IDGuru'];
-    $nama_guru = $guru['NamaGuru'];
-    $nip_guru  = !empty($guru['NIP_NUPTK']) ? $guru['NIP_NUPTK'] : '-';
+    $guru       = mysqli_fetch_assoc($query_guru);
+    $id_guru    = $guru['IDGuru'];
+    $nama_guru  = $guru['NamaGuru'];
+    $nip_guru   = !empty($guru['NIP_NUPTK']) ? $guru['NIP_NUPTK'] : '-';
+    $mapel_json = $guru['MataPelajaran']; // Mengambil string JSON hak akses
 } else { 
-    $id_guru=''; $nama_guru='Guru Pengampu'; $nip_guru='-'; 
+    $id_guru=''; $nama_guru='Guru Pengampu'; $nip_guru='-'; $mapel_json = '{}';
 }
 
-// 5. AMBIL DATA MAPEL & HITUNG STATISTIK (Mendukung Format JSON)
-$query_mapel = mysqli_query($koneksi, "SELECT * FROM mapel WHERE IDGuru='$id_guru' ORDER BY NamaMapel ASC");
-$total_mapel = $query_mapel ? mysqli_num_rows($query_mapel) : 0;
+// 5. PROSES DECODE JSON HAK AKSES UNTUK DASHBOARD REAL-TIME
+$mapel_guru_terpilih = json_decode($mapel_json, true);
+if(!is_array($mapel_guru_terpilih)) {
+    $mapel_guru_terpilih = [];
+}
 
-// Menghitung jumlah kelas unik yang diajar dari data JSON
-$kelas_unik = [];
-if($total_mapel > 0){
-    mysqli_data_seek($query_mapel, 0);
-    while($m = mysqli_fetch_assoc($query_mapel)){
-        $arr = json_decode($m['Kelas'], true);
-        if(is_array($arr)){
-            foreach($arr as $k) { $kelas_unik[$k] = true; }
-        } else {
-            if(!empty($m['Kelas'])) $kelas_unik[$m['Kelas']] = true;
+// Hitung statistik secara akurat dari data JSON
+$total_kelas_diajar = count($mapel_guru_terpilih);
+$mapel_unik = [];
+foreach($mapel_guru_terpilih as $kls => $m_list) {
+    if(is_array($m_list)) {
+        foreach($m_list as $m_nama) { 
+            $mapel_unik[$m_nama] = true; 
         }
     }
 }
-$total_kelas_diajar = count($kelas_unik);
+$total_mapel = count($mapel_unik);
+$total_belum_dinilai = 0; // Bisa dihubungkan ke sub-query pengumpulan tugas nanti
 
-// Menghitung total tugas yang belum dinilai secara global untuk guru ini
-// (Menggunakan error control @ jika tabel pengumpulan_tugas belum ada di db-mu)
-$q_bd = @mysqli_query($koneksi, "SELECT COUNT(*) as n FROM pengumpulan_tugas pt JOIN tugas t ON pt.IDTugas=t.IDTugas JOIN mapel m ON t.IDMapel=m.IDMapel WHERE m.IDGuru='$id_guru' AND pt.Status='belum_dinilai'");
-$total_belum_dinilai = $q_bd ? (mysqli_fetch_assoc($q_bd)['n'] ?? 0) : 0;
-
-// Ambil ID Mapel pertama untuk shortcut aksi cepat
+// Mengambil ID Mapel pertama dari database sebagai shortcut menu aksi cepat
 $id_mapel_pertama = '';
-if($total_mapel > 0){
-    mysqli_data_seek($query_mapel, 0);
-    $r = mysqli_fetch_assoc($query_mapel);
-    $id_mapel_pertama = $r['IDMapel'];
+if(!empty($mapel_unik)) {
+    $nama_mapel_first = mysqli_real_escape_string($koneksi, array_key_first($mapel_unik));
+    $q_first = mysqli_query($koneksi, "SELECT IDMapel FROM mapel WHERE NamaMapel = '$nama_mapel_first' LIMIT 1");
+    if($r_first = mysqli_fetch_assoc($q_first)) {
+        $id_mapel_pertama = $r_first['IDMapel'];
+    }
 }
 ?>
 
@@ -256,63 +254,92 @@ if($total_mapel > 0){
         </button>
     </div>
     <?php else: ?>
-    <div class="row g-4">
+    <div class="row g-3">
         <?php
-        mysqli_data_seek($query_mapel, 0);
-        while($mapel = mysqli_fetch_assoc($query_mapel)):
-            $cover = !empty($mapel['Gambar']) ? '../image/mapel/'.$mapel['Gambar'] : 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&q=80&w=600';
+        $idx_collapse = 0; // Penanda unik untuk animasi laci
+        foreach($mapel_guru_terpilih as $kelas_nama => $daftar_mapel):
+            if(!is_array($daftar_mapel) || empty($daftar_mapel)) continue;
             
-            // Logika Pembaca JSON Kelas Terpadu
-            $kelas_raw = $mapel['Kelas'];
-            $kelas_arr = json_decode($kelas_raw, true);
-            $kelas_tampil = is_array($kelas_arr) ? implode(', ', $kelas_arr) : $kelas_raw;
-            if(empty($kelas_tampil)) $kelas_tampil = 'Belum Ada Kelas';
-
-            // Eksekusi sub-query untuk badge (Gunakan @ untuk mengabaikan error jika tabel belum ada)
-            $q_bm = @mysqli_query($koneksi,"SELECT COUNT(*) as n FROM pengumpulan_tugas pt JOIN tugas t ON pt.IDTugas=t.IDTugas WHERE t.IDMapel='{$mapel['IDMapel']}' AND pt.Status='belum_dinilai'");
-            $belum_mapel = $q_bm ? (mysqli_fetch_assoc($q_bm)['n'] ?? 0) : 0;
-            
-            $q_jm = @mysqli_query($koneksi,"SELECT COUNT(*) as n FROM materi WHERE IDMapel='{$mapel['IDMapel']}'");
-            $jml_materi = $q_jm ? (mysqli_fetch_assoc($q_jm)['n'] ?? 0) : 0;
-            
-            $q_jt = @mysqli_query($koneksi,"SELECT COUNT(*) as n FROM tugas WHERE IDMapel='{$mapel['IDMapel']}'");
-            $jml_tugas = $q_jt ? (mysqli_fetch_assoc($q_jt)['n'] ?? 0) : 0;
+            $idx_collapse++;
+            $id_collapse = "laciKelas_" . $idx_collapse;
+            $jml_mapel = count($daftar_mapel);
         ?>
-        <div class="col-xl-4 col-md-6">
-            <div class="card mapel-card h-100">
-                <div class="mapel-img-wrap">
-                    <img src="<?= htmlspecialchars($cover) ?>" class="mapel-img" alt="cover">
-                    <span class="kelas-badge" title="<?= htmlspecialchars($kelas_tampil) ?>">
-                        <i class="bi bi-building-fill me-1 text-info"></i><?= htmlspecialchars($kelas_tampil) ?>
-                    </span>
-                    <?php if($belum_mapel > 0): ?>
-                        <span class="alert-badge pulse-animation"><i class="bi bi-exclamation-triangle-fill me-1"></i><?= $belum_mapel ?> Tugas Menunggu</span>
-                    <?php endif; ?>
-                </div>
-                <div class="card-body p-4 d-flex flex-column">
-                    <h5 class="fw-bold mb-1 text-dark text-truncate" title="<?= htmlspecialchars($mapel['NamaMapel']) ?>">
-                        <?= htmlspecialchars($mapel['NamaMapel']) ?>
-                    </h5>
-                    <p class="text-muted small mb-3 flex-grow-1" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
-                        <?= htmlspecialchars($mapel['Deskripsi'] ?? 'Kelola seluruh konten pembelajaran untuk mata pelajaran ini.') ?>
-                    </p>
-                    <div class="d-flex gap-3 mb-3" style="font-size:.78rem;color:#94a3b8; font-weight:500;">
-                        <span><i class="bi bi-file-earmark-text me-1 text-primary"></i><?= $jml_materi ?> Materi</span>
-                        <span><i class="bi bi-journal-check me-1 text-success"></i><?= $jml_tugas ?> Tugas</span>
-                        <?php if(!empty($mapel['TahunAjaran'])): ?>
-                            <span><i class="bi bi-calendar-event me-1 text-warning"></i><?= htmlspecialchars($mapel['TahunAjaran']) ?></span>
-                        <?php endif; ?>
+        <div class="col-12">
+            
+            <div class="card mapel-card border-0 shadow-sm mb-2" style="cursor:pointer;" data-bs-toggle="collapse" data-bs-target="#<?= $id_collapse ?>" aria-expanded="false">
+                <div class="card-body p-3 p-md-4 d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="bg-primary bg-opacity-10 text-primary rounded-4 p-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                            <i class="bi bi-buildings-fill fs-2"></i>
+                        </div>
+                        <div>
+                            <h4 class="fw-bold mb-1 text-dark">Kelas <?= htmlspecialchars($kelas_nama) ?></h4>
+                            <p class="text-muted small mb-0"><i class="bi bi-journal-bookmark-fill me-1"></i> Mengampu <?= $jml_mapel ?> Mata Pelajaran</p>
+                        </div>
                     </div>
-                    <div class="border-top pt-3 d-flex justify-content-between align-items-center">
-                        <span class="small text-muted fw-semibold"><i class="bi bi-people me-1"></i> Ruang Guru</span>
-                        <a href="kelolaMapel.php?id_mapel=<?= $mapel['IDMapel'] ?>" class="btn-kelola shadow-sm">
-                            Kelola Kelas <i class="bi bi-gear-fill ms-1"></i>
-                        </a>
+                    <div class="text-secondary bg-light rounded-circle d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
+                        <i class="bi bi-chevron-down fs-5"></i>
                     </div>
                 </div>
             </div>
+
+            <div class="collapse" id="<?= $id_collapse ?>">
+                <div class="row g-3 p-2 pt-1 pb-4">
+                    <?php
+                    foreach($daftar_mapel as $nama_mapel_item):
+                        // Ambil data asli dari database
+                        $nama_clean = mysqli_real_escape_string($koneksi, $nama_mapel_item);
+                        $q_detail = mysqli_query($koneksi, "SELECT * FROM mapel WHERE NamaMapel = '$nama_clean' LIMIT 1");
+                        $detail = mysqli_fetch_assoc($q_detail);
+                        
+                        $id_mapel_real = $detail ? $detail['IDMapel'] : 'MP000';
+                        $tahun_ajaran = $detail ? $detail['TahunAjaran'] : '';
+                        
+                        // Generator Gambar Gradien Otomatis (SVG)
+                        $nama_mapel_svg = htmlspecialchars($nama_mapel_item);
+                        $gradients = [['#4f46e5', '#06b6d4'], ['#f12711', '#f5af19'], ['#834d9b', '#d04ed6'], ['#11998e', '#38ef7d'], ['#fc4a1a', '#f7b733']];
+                        $idx = strlen($nama_mapel_item) % 5;
+                        $c1 = $gradients[$idx][0]; $c2 = $gradients[$idx][1];
+                        $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="300"><defs><linearGradient id="g'.$idx.'" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="'.$c1.'"/><stop offset="100%" stop-color="'.$c2.'"/></linearGradient></defs><rect width="100%" height="100%" fill="url(#g'.$idx.')"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="38" font-weight="bold">'.$nama_mapel_svg.'</text></svg>';
+                        $cover_img = 'data:image/svg+xml;base64,' . base64_encode($svg);
+
+                        // Timpa dengan gambar asli jika admin sudah menguploadnya
+                        if($detail && !empty($detail['Gambar']) && file_exists('../image/mapel/'.$detail['Gambar'])) {
+                            $cover_img = '../image/mapel/'.$detail['Gambar'];
+                        }
+                    ?>
+                    
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden" style="transition: transform 0.2s;">
+                            <div style="height: 110px; position: relative;">
+                                <img src="<?= $cover_img ?>" alt="cover" class="w-100 h-100" style="object-fit:cover;">
+                                <span class="position-absolute top-0 end-0 m-2 badge bg-dark bg-opacity-75 rounded-pill shadow-sm">
+                                    <i class="bi bi-tag-fill text-warning me-1"></i> <?= $id_mapel_real ?>
+                                </span>
+                            </div>
+                            <div class="card-body p-3 d-flex flex-column bg-white">
+                                <h6 class="fw-bold mb-1 text-dark text-truncate" title="<?= htmlspecialchars($nama_mapel_item) ?>">
+                                    <?= htmlspecialchars($nama_mapel_item) ?>
+                                </h6>
+                                <p class="text-muted small mb-3">
+                                    <?php if(!empty($tahun_ajaran)): ?>
+                                        <i class="bi bi-calendar-event me-1 text-primary"></i> <?= htmlspecialchars($tahun_ajaran) ?>
+                                    <?php endif; ?>
+                                </p>
+                                <div class="mt-auto border-top pt-2">
+                                    <a href="kelolaMapel.php?id_mapel=<?= $id_mapel_real ?>&kelas=<?= urlencode($kelas_nama) ?>" class="btn btn-primary btn-sm w-100 rounded-pill fw-bold shadow-sm" style="background: var(--grad); border: none;">
+                                        Masuk Mapel <i class="bi bi-arrow-right-circle ms-1"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+
         </div>
-        <?php endwhile; ?>
+        <?php endforeach; ?>
     </div>
     <?php endif; ?>
 
