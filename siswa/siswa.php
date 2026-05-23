@@ -117,8 +117,8 @@ $emoji_badge = $badges[($level_sekarang - 1) % count($badges)];
             <div class="collapse navbar-collapse justify-content-end" id="topNav">
                 <ul class="navbar-nav align-items-center gap-2 mt-2 mt-lg-0">
                     <li class="nav-item"><a class="nav-link active fw-semibold px-3" href="siswa.php"><i class="bi bi-house-door me-1"></i>Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link px-3" href="#"><i class="bi bi-collection-play me-1"></i>Tugas Saya</a></li>
-                    <li class="nav-item"><a class="nav-link px-3" href="#"><i class="bi bi-trophy me-1"></i>Leaderboard</a></li>
+                    <li class="nav-item"><a class="nav-link px-3" href="tugas.php"><i class="bi bi-collection-play me-1"></i>Tugas Saya</a></li>
+                    <li class="nav-item"><a class="nav-link px-3" href="gamifikasi.php"><i class="bi bi-trophy me-1"></i>Leaderboard</a></li>
                     <li class="nav-item ms-lg-2">
                         <button class="btn btn-link text-white p-2" id="themeToggle" onclick="switchTheme()">
                             <i class="bi bi-sun-fill fs-5" id="themeIcon"></i>
@@ -241,7 +241,7 @@ $emoji_badge = $badges[($level_sekarang - 1) % count($badges)];
                                         </p>
                                         <div class="border-top pt-3 d-flex justify-content-between align-items-center">
                                             <span class="small text-muted fw-semibold"><i class="bi bi-file-earmark-text me-1"></i> Materi & Tugas</span>
-                                            <a href="#" class="btn btn-danger btn-sm rounded-pill px-4 fw-bold shadow-sm">
+                                            <a href="mapel.php?id_mapel=<?= $mapel['IDMapel']; ?>" class="btn btn-danger btn-sm rounded-pill px-4 fw-bold shadow-sm">
                                                 Masuk Kelas <i class="bi bi-arrow-right ms-1"></i>
                                             </a>
                                         </div>
