@@ -228,7 +228,7 @@ if($mode_detail) {
                                 <span class="badge bg-danger bg-opacity-10 text-danger rounded mb-3 px-2.5 py-1.5 small fw-bold align-self-start" style="color: #dc3545 !important; background-color: rgba(220,53,69,0.1) !important;">
                                     <?= htmlspecialchars($tugas['NamaMapel']) ?>
                                 </span>
-                                <h3 class="fw-bold text-dark mb-2"><?= htmlspecialchars($tugas['JudulTugas']) ?></h3>
+                                <h3 class="fw-bold text-dark mb-2"><?= htmlspecialchars($tugas['Judul']) ?></h3>
                                 <p class="text-muted small mb-4"><i class="bi bi-clock-history me-1"></i> Batas Pengumpulan: <strong class="text-danger"><?= date('d M Y, H:i', strtotime($tugas['Deadline'])) ?> WIB</strong></p>
                                 
                                 <h5 class="fw-bold text-dark border-bottom pb-2 mb-3">Deskripsi / Instruksi Tugas:</h5>
@@ -262,16 +262,22 @@ if($mode_detail) {
                                         <span class="small fw-semibold">Anda belum mengirimkan lembar jawaban berkas tugas ini.</span>
                                     </div>
                                     
-                                    <form action="proses_kumpul_tugas.php" method="POST" enctype="multipart/form-data">
-                                        <input type="hidden" name="id_tugas" value="<?= $id_tugas ?>">
-                                        <div class="mb-3">
-                                            <label class="form-label small fw-bold text-dark">Unggah Berkas Jawaban (PDF/DOCX/ZIP):</label>
-                                            <input type="file" class="form-control form-control-sm rounded-3" name="file_tugas" required>
-                                        </div>
-                                        <button type="submit" class="btn btn-danger w-100 rounded-pill fw-semibold py-2" style="background: linear-gradient(135deg, #dc3545, #9b1c26); border: none;">
-                                            Kirim Tugas Sekarang
-                                        </button>
-                                    </form>
+                                    <div class="card shadow-sm border-0 rounded-4 mt-4">
+                                    <div class="card-body p-4">
+                                        <h5 class="fw-bold text-dark mb-3"><i class="bi bi-cloud-arrow-up text-danger me-2"></i>Formulir Pengumpulan Tugas</h5>
+                                        
+                                        <form action="proses_upTugas.php" method="POST" enctype="multipart/form-data">
+                                            <input type="hidden" name="id_tugas" value="<?= htmlspecialchars($id_tugas) ?>">
+                                            
+                                            <div class="mb-3">
+                                                <label for="file_jawaban" class="form-label fw-semibold small text-muted">Unggah Berkas Jawaban (PDF/DOCX/ZIP/XLS):</label>
+                                                <input class="form-control" type="file" id="file_jawaban" name="file_jawaban" required>
+                                            </div>
+                                            
+                                            <button type="submit" name="submit_tugas" class="btn btn-danger text-white rounded-pill px-4 fw-semibold" style="background: linear-gradient(135deg, #dc3545, #9b1c26); border: none;">
+                                                <i class="bi bi-send me-1"></i> Kirim Tugas Sekarang
+                                            </button>
+                                        </form>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -311,7 +317,7 @@ if($mode_detail) {
                                             ?>
                                                 <tr>
                                                     <td class="py-3 px-4 fw-semibold text-dark"><?= htmlspecialchars($row['NamaMapel']) ?></td>
-                                                    <td class="text-dark"><?= htmlspecialchars($row['JudulTugas']) ?></td>
+                                                    <td class="text-dark"><?= htmlspecialchars($row['Judul']) ?></td>
                                                     <td class="text-muted small"><?= date('d M Y, H:i', strtotime($row['Deadline'])) ?> WIB</td>
                                                     <td>
                                                         <?php if($is_done): ?>
