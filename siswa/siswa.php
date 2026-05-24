@@ -160,30 +160,36 @@ $tugas_pending = (mysqli_fetch_assoc($q_tugas_pending)['total_pending']) ?? 0;
         .btn-masuk { background: var(--primary-light); color: var(--primary); border: none; border-radius: 12px; font-weight: 700; padding: 10px; transition: 0.3s; }
         .btn-masuk:hover { background: var(--primary); color: #fff; }
 
-        /* MODE DAFTAR (LIST VIEW CSS - Gaya Google Classroom) */
-        #courseContainer.list-mode .col-mapel { width: 100%; flex: 0 0 100%; max-width: 100%; padding: 0 10px; }
+        /* MODE DAFTAR (LIST VIEW CSS - Gaya Google Classroom Diperbarui) */
+        #courseContainer.list-mode { display: block; }
+        #courseContainer.list-mode .col-mapel { width: 100%; flex: 0 0 100%; max-width: 100%; margin-bottom: 15px; padding: 0; }
         #courseContainer.list-mode .mapel-card { 
             flex-direction: row; height: auto !important; align-items: center; 
-            border-radius: 0; box-shadow: none; border-bottom: 1px solid #e2e8f0; 
-            padding: 15px 5px; background: transparent; cursor: pointer;
+            border-radius: 16px; padding: 15px; background: #fff;
+            border: 1px solid #e2e8f0; cursor: default;
         }
-        #courseContainer.list-mode .mapel-card:hover { transform: none; box-shadow: none; background: #f8fafc; }
-        #courseContainer.list-mode .mapel-cover { width: 130px; height: 85px; border-radius: 8px; flex-shrink: 0; }
-        #courseContainer.list-mode .badge-kelas { display: none; } /* Sembunyikan badge di mode list */
-        #courseContainer.list-mode .card-body { padding: 0 0 0 20px !important; flex-direction: row !important; align-items: center; justify-content: space-between; }
-        #courseContainer.list-mode .info-wrapper { flex-grow: 1; }
-        #courseContainer.list-mode .mapel-title { color: #1a73e8 !important; font-size: 1.1rem; margin-bottom: 4px !important; }
-        #courseContainer.list-mode .text-muted.small { font-size: 0.85rem; color: #3c4043 !important; }
-        #courseContainer.list-mode .text-muted.small i { display: none; } /* Sembunyikan icon guru */
-        #courseContainer.list-mode .btn-wrapper { display: none; } /* Sembunyikan tombol mulai belajar */
-        #courseContainer.list-mode .progress-container { display: none; } /* Sembunyikan progress bar di mode list */
+        #courseContainer.list-mode .mapel-card:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(79, 70, 229, 0.08); }
+        #courseContainer.list-mode .mapel-cover { width: 220px; height: 130px; border-radius: 12px; flex-shrink: 0; position: relative; }
+        #courseContainer.list-mode .badge-kelas { display: block; font-size: 0.75rem; padding: 5px 10px; top: 10px; left: 10px; }
+        #courseContainer.list-mode .card-body { padding: 0 0 0 25px !important; flex-direction: row !important; align-items: center; justify-content: space-between; width: 100%; }
+        #courseContainer.list-mode .info-wrapper { flex-grow: 1; max-width: 40%; }
+        #courseContainer.list-mode .mapel-title { color: var(--text-dark) !important; font-size: 1.25rem; }
+        #courseContainer.list-mode .text-muted.small i { display: inline-block; }
+        
+        /* Memunculkan dan menata letak Progress Bar di tengah */
+        #courseContainer.list-mode .progress-container { display: block; width: 30%; margin-bottom: 0 !important; margin-top: 0 !important; margin-right: 25px; }
+        
+        /* Memunculkan dan menata letak Tombol di kanan */
+        #courseContainer.list-mode .btn-wrapper { display: block; width: auto; margin-top: 0 !important; }
+        #courseContainer.list-mode .btn-masuk { width: auto !important; padding: 10px 25px; border-radius: 50px; }
 
         @media (max-width: 768px) { 
             .sidebar { display: none; } 
-            #courseContainer.list-mode .mapel-card { flex-direction: column; height: auto !important; }
-            #courseContainer.list-mode .mapel-cover { width: 100%; height: 140px; border-radius: 16px 16px 0 0; }
-            #courseContainer.list-mode .card-body { flex-direction: column !important; align-items: flex-start; }
-            #courseContainer.list-mode .btn-wrapper { width: 100%; margin-top: 15px !important; }
+            #courseContainer.list-mode .mapel-card { flex-direction: column; align-items: stretch; }
+            #courseContainer.list-mode .mapel-cover { width: 100%; height: 160px; margin-bottom: 15px; }
+            #courseContainer.list-mode .card-body { padding: 0 !important; flex-direction: column !important; align-items: stretch; }
+            #courseContainer.list-mode .info-wrapper { max-width: 100%; margin-bottom: 15px; }
+            #courseContainer.list-mode .progress-container { width: 100%; margin-right: 0; margin-bottom: 15px !important; }
         }
 
         /* FOOTER */
@@ -358,7 +364,7 @@ $tugas_pending = (mysqli_fetch_assoc($q_tugas_pending)['total_pending']) ?? 0;
                             $persentase = ($tot_tugas > 0) ? round(($tot_selesai / $tot_tugas) * 100) : 0;
                         ?>
                             <div class="col-md-6 col-xl-4 col-mapel" data-title="<?= strtolower($row['NamaMapel']) ?>">
-                                <div class="card mapel-card h-100 d-flex flex-column" onclick="if(document.getElementById('courseContainer').classList.contains('list-mode')) window.location.href='mapel.php?id_mapel=<?= $row['IDMapel'] ?>'">
+                                <div class="card mapel-card h-100 d-flex flex-column">
                                     <div class="mapel-cover">
                                         <img src="<?= $cover_img ?>" alt="Cover Mapel">
                                         <span class="badge-kelas"><i class="bi bi-diagram-3-fill me-1 text-primary"></i> <?= htmlspecialchars($kelas_siswa) ?></span>
@@ -366,7 +372,7 @@ $tugas_pending = (mysqli_fetch_assoc($q_tugas_pending)['total_pending']) ?? 0;
                                     <div class="card-body p-4 d-flex flex-column">
                                         <div class="info-wrapper">
                                             <h5 class="fw-bold text-dark mb-1 text-truncate mapel-title" title="<?= htmlspecialchars($row['NamaMapel']) ?>"><?= htmlspecialchars($row['NamaMapel']) ?></h5>
-                                            <p class="small text-muted mb-3 flex-grow-1"><i class="bi bi-person-video3 me-1"></i> <?= htmlspecialchars($row['Kelas'] ?? '') ?> • <?= htmlspecialchars($row['NamaGuru'] ?? 'Belum Ditentukan') ?></p>
+                                            <p class="small text-muted mb-3 flex-grow-1"><i class="bi bi-person-video3 me-1"></i> Guru: <span class="fw-semibold text-dark"><?= htmlspecialchars($row['NamaGuru'] ?? 'Belum Ditentukan') ?></span></p>
                                         </div>
                                         
                                         <div class="progress-container mb-3 mt-auto">
@@ -380,7 +386,7 @@ $tugas_pending = (mysqli_fetch_assoc($q_tugas_pending)['total_pending']) ?? 0;
                                         </div>
 
                                         <div class="btn-wrapper mt-auto">
-                                            <a href="mapel.php?id_mapel=<?= $row['IDMapel'] ?>" class="btn btn-masuk w-100 d-block text-center">
+                                            <a href="mapel.php?id_mapel=<?= $row['IDMapel'] ?>" class="btn btn-masuk w-100 d-block text-center shadow-sm">
                                                 Mulai Belajar <i class="bi bi-arrow-right-circle-fill ms-1"></i>
                                             </a>
                                         </div>
