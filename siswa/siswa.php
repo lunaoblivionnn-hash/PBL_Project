@@ -35,13 +35,28 @@ $xp_siswa = $data_siswa['TotalXP'] ?? 0;
 $nama_lengkap = $data_siswa['Nama'] ?? $data_siswa['NamaSiswa'] ?? 'Siswa';
 $nama_depan = htmlspecialchars(explode(' ', trim($nama_lengkap))[0]);
 
-// 3. AMBIL DATA GAMIFIKASI DARI DATABASE (Tabel gamifikasi & master_level)
+// 3. SINKRONISASI DATA GAMIFIKASI SESUAI ATURAN MASTER LEVEL & ATURAN POIN
 $query_gami = mysqli_query($koneksi, "
     SELECT g.TotalPoint, ml.LevelAngka, ml.Gelar 
-    FROM gamifikasi g 
-    LEFT JOIN master_level ml ON g.IDLevel = ml.IDLevel 
+    FROM gamifikasi g
+    JOIN master_level ml ON g.TotalPoint >= ml.BatasPoin 
     WHERE g.IDSiswa = '$id_siswa'
+    ORDER BY ml.BatasPoin DESC LIMIT 1
 ");
+
+if($query_gami && mysqli_num_rows($query_gami) > 0){
+    $data_gami = mysqli_fetch_assoc($query_gami);
+    $xp_siswa = $data_gami['TotalPoint'] ?? 0;
+    $level_siswa = $data_gami['LevelAngka'] ?? 1;
+    $gelar = $data_gami['Gelar'] ?? 'Beginner Accountant';
+} else {
+    // Jika data siswa baru belum tercatat di tabel gamifikasi, ambil level terendah dari master_level
+    $q_lvl_min = mysqli_query($koneksi, "SELECT LevelAngka, Gelar FROM master_level ORDER BY BatasPoin ASC LIMIT 1");
+    $d_min = mysqli_fetch_assoc($q_lvl_min);
+    $xp_siswa = 0;
+    $level_siswa = $d_min['LevelAngka'] ?? 1;
+    $gelar = $d_min['Gelar'] ?? 'Beginner Accountant';
+}
 
 if($data_gami = mysqli_fetch_assoc($query_gami)){
     $xp_siswa = $data_gami['TotalPoint'] ?? 0;
@@ -354,16 +369,31 @@ $tugas_pending = (mysqli_fetch_assoc($q_tugas_pending)['total_pending']) ?? 0;
                                 $cover_img = "../image/mapel/" . $row['Gambar'];
                             }
 
-                            // HITUNG PERSENTASE PROGRESS (Berdasarkan Tugas yang Selesai vs Total Tugas di Mapel ini)
+                            // HITUNG DATA PROGRESS REALTIME (Tugas + Materi)
                             $q_tot_tugas = mysqli_query($koneksi, "SELECT COUNT(IDTugas) as tot FROM tugas WHERE IDMapel = '$id_mapel_loop'");
                             $tot_tugas = mysqli_fetch_assoc($q_tot_tugas)['tot'] ?? 0;
                             
                             $q_selesai = mysqli_query($koneksi, "SELECT COUNT(pt.IDPengumpulan) as sel FROM pengumpulan_tugas pt JOIN tugas t ON pt.IDTugas = t.IDTugas WHERE t.IDMapel = '$id_mapel_loop' AND pt.IDSiswa = '$id_siswa'");
                             $tot_selesai = mysqli_fetch_assoc($q_selesai)['sel'] ?? 0;
 
-                            $persentase = ($tot_tugas > 0) ? round(($tot_selesai / $tot_tugas) * 100) : 0;
+                            // Ambil data jumlah total materi pada mapel ini
+                            $q_tot_materi = mysqli_query($koneksi, "SELECT COUNT(IDMateri) as tot FROM materi WHERE IDMapel = '$id_mapel_loop'");
+                            $tot_materi = mysqli_fetch_assoc($q_tot_materi)['tot'] ?? 0;
+
+                            // Kumpulkan semua ID materi untuk dipisahkan dengan koma agar bisa dibaca JavaScript
+                            $q_materi_list = mysqli_query($koneksi, "SELECT IDMateri FROM materi WHERE IDMapel = '$id_mapel_loop'");
+                            $materi_ids = [];
+                            while($m_row = mysqli_fetch_assoc($q_materi_list)) {
+                                $materi_ids[] = 'materi_' . $m_row['IDMateri'];
+                            }
+                            $materi_ids_str = implode(',', $materi_ids);
                         ?>
-                            <div class="col-md-6 col-xl-4 col-mapel" data-title="<?= strtolower($row['NamaMapel']) ?>">
+                            <div class="col-md-6 col-xl-4 col-mapel" 
+                                 data-title="<?= strtolower($row['NamaMapel']) ?>"
+                                 data-total-tugas="<?= $tot_tugas ?>"
+                                 data-selesai-tugas="<?= $tot_selesai ?>"
+                                 data-total-materi="<?= $tot_materi ?>"
+                                 data-materi-ids="<?= $materi_ids_str ?>">
                                 <div class="card mapel-card h-100 d-flex flex-column">
                                     <div class="mapel-cover">
                                         <img src="<?= $cover_img ?>" alt="Cover Mapel">
@@ -378,10 +408,10 @@ $tugas_pending = (mysqli_fetch_assoc($q_tugas_pending)['total_pending']) ?? 0;
                                         <div class="progress-container mb-3 mt-auto">
                                             <div class="d-flex justify-content-between align-items-center mb-1">
                                                 <span class="small text-muted fw-semibold" style="font-size: 0.75rem;">Progress Belajar</span>
-                                                <span class="small fw-bold text-primary" style="font-size: 0.75rem;"><?= $persentase ?>%</span>
+                                                <span class="small fw-bold text-primary" style="font-size: 0.75rem;">0%</span>
                                             </div>
                                             <div class="progress" style="height: 6px; background-color: #e2e8f0; box-shadow: none;">
-                                                <div class="progress-bar bg-primary rounded-pill" role="progressbar" style="width: <?= $persentase ?>%"></div>
+                                                <div class="progress-bar bg-primary rounded-pill" role="progressbar" style="width: 0%"></div>
                                             </div>
                                         </div>
 
@@ -461,6 +491,8 @@ $tugas_pending = (mysqli_fetch_assoc($q_tugas_pending)['total_pending']) ?? 0;
             }
         });
     });
+
+    
     </script>
     <?php endif; ?>
     
@@ -523,6 +555,44 @@ $tugas_pending = (mysqli_fetch_assoc($q_tugas_pending)['total_pending']) ?? 0;
             // Kosongkan container lalu masukkan kembali sesuai urutan
             cards.forEach(card => container.appendChild(card));
         }
+    </script>
+
+<script>
+        // FUNGSI SINKRONISASI PROGRESS BAR (GABUNGAN DATABASE TUGAS + LOCALSTORAGE MATERI)
+        function sinkronisasiProgressBarLMS() {
+            document.querySelectorAll('.col-mapel').forEach(card => {
+                const totalTugas = parseInt(card.getAttribute('data-total-tugas')) || 0;
+                const selesaiTugas = parseInt(card.getAttribute('data-selesai-tugas')) || 0;
+                const totalMateri = parseInt(card.getAttribute('data-total-materi')) || 0;
+                const materiIdsStr = card.getAttribute('data-materi-ids') || '';
+                
+                // Hitung berapa materi yang sudah ditandai selesai di localStorage browser
+                let selesaiMateri = 0;
+                if (materiIdsStr) {
+                    materiIdsStr.split(',').forEach(id => {
+                        if (localStorage.getItem(id) === 'selesai') {
+                            selesaiMateri++;
+                        }
+                    });
+                }
+                
+                const totalItem = totalTugas + totalMateri;
+                const totalSelesai = selesaiTugas + selesaiMateri;
+                
+                // Rumus persentase baru
+                const persentase = totalItem > 0 ? Math.round((totalSelesai / totalItem) * 100) : 0;
+                
+                // Suntikkan nilai persentase baru ke UI Progress Bar & Teks Persen
+                const progressBars = card.querySelectorAll('.progress-bar');
+                const progressTexts = card.querySelectorAll('.progress-container .text-primary');
+                
+                progressBars.forEach(bar => bar.style.width = persentase + '%');
+                progressTexts.forEach(text => text.innerText = persentase + '%');
+            });
+        }
+
+        // Jalankan fungsi otomatis saat dashboard siswa dibuka
+        document.addEventListener('DOMContentLoaded', sinkronisasiProgressBarLMS);
     </script>
 </body>
 </html>
