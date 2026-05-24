@@ -116,6 +116,12 @@ $deskripsi_mapel = !empty($mapel['Deskripsi']) ? $mapel['Deskripsi'] : 'Belum ad
                 <p class="mb-0 text-muted mt-2" style="font-size: 0.9rem; max-width: 90%;"><?= nl2br(htmlspecialchars($deskripsi_mapel)) ?></p>
             </div>
 
+            <div class="d-flex justify-content-end mb-3">
+                <button class="btn btn-sm btn-white border text-secondary fw-bold shadow-sm rounded-pill px-3 bg-white" id="btnToggleAll" onclick="toggleAllSections()">
+                    <i class="bi bi-arrows-expand me-1"></i> <span id="textToggleAll">Buka Semua Bab</span>
+                </button>
+            </div>
+
             <?php 
             $q_topik_all = mysqli_query($koneksi, "SELECT * FROM topik_mapel WHERE IDMapel = '$id_mapel' ORDER BY Urutan ASC");
             while($topik = mysqli_fetch_assoc($q_topik_all)): 
@@ -136,7 +142,7 @@ $deskripsi_mapel = !empty($mapel['Deskripsi']) ? $mapel['Deskripsi'] : 'Belum ad
                     </div>
                 </div>
 
-                <div id="collapseTopik<?= $id_topik ?>" class="collapse show">
+                <div id="collapseTopik<?= $id_topik ?>" class="collapse">
                     <div class="section-body">
                         
                         <?php
@@ -259,8 +265,8 @@ $deskripsi_mapel = !empty($mapel['Deskripsi']) ? $mapel['Deskripsi'] : 'Belum ad
             </div>
             <?php endwhile; ?>
 
-            <div class="text-center mt-4 pt-2">
-                <button class="btn btn-primary bg-opacity-10 text-primary border-primary fw-bold rounded-pill px-4 shadow-sm py-2" data-bs-toggle="modal" data-bs-target="#modalTambahTopik">
+            <div class="text-center mt-4 pt-2 mb-5">
+                <button class="btn btn-outline-primary border-2 fw-bold rounded-pill px-4 shadow-sm py-2" data-bs-toggle="modal" data-bs-target="#modalTambahTopik">
                     <i class="bi bi-plus-circle-fill me-2"></i> Tambah Section / Bagian Baru
                 </button>
             </div>
@@ -413,8 +419,12 @@ $deskripsi_mapel = !empty($mapel['Deskripsi']) ? $mapel['Deskripsi'] : 'Belum ad
                             <i class="bi bi-send-fill me-2"></i>Publikasikan Tugas
                         </button>
                     </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
-                    <div class="modal fade" id="modalEditTugas" tabindex="-1">
+    <div class="modal fade" id="modalEditTugas" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content rounded-4 border-0 shadow-lg">
                 <div class="modal-header bg-success text-white border-0 p-4">
@@ -495,10 +505,6 @@ $deskripsi_mapel = !empty($mapel['Deskripsi']) ? $mapel['Deskripsi'] : 'Belum ad
             </div>
         </div>
     </div>
-                </form>
-            </div>
-        </div>
-    </div>
 
     <div class="modal fade" id="modalEditDeskripsi" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content border-0 shadow-lg rounded-4"><form method="POST"><div class="modal-body p-4 bg-light"><textarea name="deskripsi_baru" class="form-control shadow-sm border-0" rows="5" required><?= htmlspecialchars($mapel['Deskripsi'] ?? '') ?></textarea></div><div class="modal-footer border-0 p-3"><button type="submit" name="simpan_deskripsi" class="btn btn-primary px-4 fw-bold">Simpan</button></div></form></div></div></div>
     <div class="modal fade" id="modalTambahTopik" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg rounded-4"><form method="POST"><div class="modal-body p-4 pt-4"><label class="form-label small fw-bold">Judul Bagian / Bab <span class="text-danger">*</span></label><input type="text" name="nama_topik" class="form-control" required></div><div class="modal-footer border-0 p-3"><button type="submit" name="tambah_topik" class="btn btn-primary w-100 fw-bold rounded-pill">Tambahkan</button></div></form></div></div></div>
@@ -514,6 +520,37 @@ $deskripsi_mapel = !empty($mapel['Deskripsi']) ? $mapel['Deskripsi'] : 'Belum ad
         
         function showFileMateri(input) { const f = input.files[0]; if (!f) return; document.getElementById('namaFileMateri').textContent = f.name; document.getElementById('previewMateriBox').classList.remove('d-none'); document.getElementById('previewMateriBox').classList.add('d-flex'); document.getElementById('zoneMateri').classList.add('d-none'); }
         function clearFileMateri() { document.getElementById('fileMateri').value = ''; document.getElementById('previewMateriBox').classList.add('d-none'); document.getElementById('previewMateriBox').classList.remove('d-flex'); document.getElementById('zoneMateri').classList.remove('d-none'); }
+
+        // Fitur Buka/Tutup Semua Section
+        let isAllOpen = false;
+        function toggleAllSections() {
+            // Ambil semua elemen laci yang ID-nya berawalan 'collapseTopik'
+            const sections = document.querySelectorAll('[id^="collapseTopik"]');
+            const btnText = document.getElementById('textToggleAll');
+            const btnIcon = document.querySelector('#btnToggleAll i');
+
+            isAllOpen = !isAllOpen; // Balikkan status
+
+            sections.forEach(section => {
+                // Gunakan class bawaan Bootstrap untuk memanipulasi collapse
+                const bsCollapse = new bootstrap.Collapse(section, { toggle: false });
+                if (isAllOpen) {
+                    bsCollapse.show(); // Buka
+                } else {
+                    bsCollapse.hide(); // Tutup
+                }
+            });
+
+            // Ganti teks dan ikon tombol
+            if (isAllOpen) {
+                btnText.innerText = "Tutup Semua Bab";
+                btnIcon.className = "bi bi-arrows-collapse me-1";
+            } else {
+                btnText.innerText = "Buka Semua Bab";
+                btnIcon.className = "bi bi-arrows-expand me-1";
+            }
+        }
+
 
         // Fungsi untuk Auto-Populate Form Edit Tugas
         function bukaModalEditTugas(btnElement) {
