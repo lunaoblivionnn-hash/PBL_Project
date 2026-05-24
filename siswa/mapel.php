@@ -4,58 +4,57 @@ require '../login/koneksi.php';
 
 // Pastikan yang masuk adalah akun dengan role siswa
 if(!isset($_SESSION['role']) || $_SESSION['role'] != 'siswa'){
-    header("Location: ../login/login.php"); exit;
+    header("Location: ../login/login.php");
+    exit;
 }
 
-$id_user = $_SESSION['IDUser'] ?? '';
-$id_mapel = mysqli_real_escape_string($koneksi, $_GET['id_mapel'] ?? '');
+// Ambil IDMapel dari URL
+$id_mapel = isset($_GET['id_mapel']) ? mysqli_real_escape_string($koneksi, $_GET['id_mapel']) : '';
 
-if(empty($id_mapel)){
-    header("Location: siswa.php"); exit;
+if(empty($id_mapel)) {
+    header("Location: siswa.php");
+    exit;
 }
 
-// 1. Ambil data siswa
-$query_siswa = mysqli_query($koneksi, "SELECT * FROM siswa WHERE IDUser='$id_user'");
-$siswa = mysqli_fetch_assoc($query_siswa);
-$id_siswa = $siswa['IDSiswa'] ?? '';
+// 1. IDENTIFIKASI IDUSER & DATA SISWA
+$id_user = isset($_SESSION['IDUser']) ? $_SESSION['IDUser'] : '';
+$query_siswa = mysqli_query($koneksi, "SELECT * FROM siswa WHERE IDUser = '$id_user'");
+$data_siswa = mysqli_fetch_assoc($query_siswa);
 
-// 2. Ambil detail mapel (Sesuai kolom asli: IDMapel, NamaMapel, IDGuru)
-$query_mapel = mysqli_query($koneksi, "
+// 2. AMBIL DETAIL MATA PELAJARAN & GURU
+$query_detail_mapel = mysqli_query($koneksi, "
     SELECT m.*, g.NamaGuru 
     FROM mapel m 
     LEFT JOIN guru g ON m.IDGuru = g.IDGuru 
-    WHERE m.IDMapel='$id_mapel'
+    WHERE m.IDMapel = '$id_mapel'
 ");
-if(mysqli_num_rows($query_mapel) == 0){
-    header("Location: siswa.php"); exit;
+$data_mapel = mysqli_fetch_assoc($query_detail_mapel);
+
+// Jika IDMapel tidak ditemukan di database, kembalikan ke dashboard
+if(!$data_mapel) {
+    header("Location: siswa.php");
+    exit;
 }
-$mapel = mysqli_fetch_assoc($query_mapel);
 
-// 3. Ambil daftar materi
-$query_materi = mysqli_query($koneksi, "SELECT * FROM materi WHERE IDMapel='$id_mapel'");
-
-// 4. Ambil daftar tugas berkaitan dengan mapel ini
-$query_tugas = mysqli_query($koneksi, "SELECT * FROM tugas WHERE IDMapel='$id_mapel' ORDER BY Deadline ASC");
+// 3. AMBIL DAFTAR TOPIK UNTUK MAPEL INI (Diurutkan berdasarkan kolom 'Urutan')
+$query_topik = mysqli_query($koneksi, "SELECT * FROM topik_mapel WHERE IDMapel = '$id_mapel' ORDER BY Urutan ASC");
 ?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ruang Kelas: <?= htmlspecialchars($mapel['NamaMapel']) ?> - LMS SMKN 1 Wongsorejo</title>
+    <title><?= htmlspecialchars($data_mapel['NamaMapel']) ?> - LMS SMKN 1 Wongsorejo</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     
     <style>
         :root {
             --primary-gradient: linear-gradient(135deg, #dc3545, #9b1c26);
-            --card-gradient: linear-gradient(135deg, #1e1e2f, #111119);
+            --header-gradient: linear-gradient(135deg, #1e1e2f, #111119);
         }
         
         html, body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
             background-color: #f4f6f9; 
             color: #333; 
             font-family: 'Segoe UI', system-ui, sans-serif;
@@ -72,13 +71,11 @@ $query_tugas = mysqli_query($koneksi, "SELECT * FROM tugas WHERE IDMapel='$id_ma
             border-radius: 0px 12px 12px 0px;
             padding: 20px 15px;
             min-height: calc(100vh - 56px);
-            height: 100%;
         }
 
         .sidebar .nav-link {
             color: #495057 !important;
             font-weight: 500;
-            transition: all 0.2s ease;
             border-radius: 8px;
             margin-bottom: 4px;
         }
@@ -87,56 +84,52 @@ $query_tugas = mysqli_query($koneksi, "SELECT * FROM tugas WHERE IDMapel='$id_ma
             background: rgba(220, 53, 69, 0.1) !important;
             color: #dc3545 !important;
         }
-        
-        .hero-profile-card { 
-            background: var(--card-gradient) !important; 
-            color: white !important; 
-            border: none !important; 
-            border-radius: 20px; 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.15); 
-            overflow: hidden; 
-            position: relative; 
-        }
-        
-        .hero-profile-card::before { 
-            content: ''; 
-            position: absolute; 
-            top: -50%; 
-            right: -20%; 
-            width: 300px; 
-            height: 300px; 
-            background: rgba(220, 53, 69, 0.15); 
-            filter: blur(50px); 
-            border-radius: 50%; 
+
+        .mapel-header-card {
+            background: var(--header-gradient) !important;
+            color: white !important;
+            border: none;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
         }
 
-        .mapel-card { 
-            border: none !important; 
-            border-radius: 16px; 
-            background-color: #fff !important; 
-            box-shadow: 0 5px 15px rgba(0,0,0,0.04); 
-            overflow: hidden; 
+        .topik-card {
+            border: none;
+            border-radius: 16px;
+            background-color: #fff;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            margin-bottom: 25px;
         }
 
-        .item-list-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.85rem 1rem;
-            border-bottom: 1px solid #f1f3f5;
-            transition: background-color 0.2s ease;
+        .topik-title {
+            color: #1e1e2f;
+            font-weight: 700;
+            border-bottom: 2px solid #f4f6f9;
+            padding-bottom: 12px;
         }
 
-        .item-list-row:last-child {
-            border-bottom: none;
-        }
-
-        .item-list-row:hover {
+        .item-materi {
             background-color: #f8f9fa;
+            border-left: 4px solid #0d6efd; /* Biru untuk Materi */
+            border-radius: 8px;
+            transition: all 0.2s;
         }
 
-        .text-dark {
-            color: #212529 !important;
+        .item-materi:hover {
+            background-color: #f1f3f5;
+            transform: translateX(4px);
+        }
+
+        .item-tugas {
+            background-color: #fff5f5;
+            border-left: 4px solid #dc3545; /* Merah untuk Tugas */
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .item-tugas:hover {
+            background-color: #ffebe0;
+            transform: translateX(4px);
         }
     </style>
 </head>
@@ -145,16 +138,12 @@ $query_tugas = mysqli_query($koneksi, "SELECT * FROM tugas WHERE IDMapel='$id_ma
     <nav class="navbar navbar-expand-lg navbar-dark navbar-custom sticky-top py-2">
         <div class="container-fluid px-4">
             <a class="navbar-brand fw-bold d-flex align-items-center" href="siswa.php">
-                <span class="fs-5 tracking-wide">🎓 LMS SMKN 1 Wongsorejo</span>
+                <span class="fs-5">🎓 LMS SMKN 1 Wongsorejo</span>
             </a>
-            
             <div class="d-flex align-items-center gap-3">
                 <div class="text-end text-white d-none d-md-block">
-                    <h6 class="mb-0 fw-bold small text-nowrap" style="font-size: 1.25rem"><?= htmlspecialchars($siswa['Nama'] ?? 'Siswa') ?></h6>
-                    <small class="text-white-50 text-uppercase d-block" style="font-size: 0.65rem; letter-spacing: 0.5px;"><?= htmlspecialchars($siswa['Kelas'] ?? '') ?></small>
-                </div>
-                <div class="rounded-circle bg-white p-0.5 shadow-sm border border-2 border-white border-opacity-20">
-                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=60" alt="Avatar" class="rounded-circle" style="width: 35px; height: 35px; object-fit: cover;">
+                    <h6 class="mb-0 fw-bold small"><?= htmlspecialchars($data_siswa['NamaSiswa'] ?? 'Siswa') ?></h6>
+                    <small class="text-white-50 text-uppercase d-block" style="font-size: 0.65rem;"><?= htmlspecialchars($data_siswa['Kelas'] ?? '') ?></small>
                 </div>
             </div>
         </div>
@@ -163,112 +152,104 @@ $query_tugas = mysqli_query($koneksi, "SELECT * FROM tugas WHERE IDMapel='$id_ma
     <div class="container-fluid px-0">
         <div class="row g-0">
             
-            <nav class="col-md-3 col-lg-2 d-md-block sidebar">
+            <nav class="col-md-3 col-lg-2 d-md-block sidebar d-none d-md-block">
                 <div class="position-sticky">
                     <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link" href="siswa.php">
-                                <i class="bi bi-house-door me-2"></i>Dashboard
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link active" href="tugas.php">
-                                <i class="bi bi-book me-2"></i>Mata Pelajaran
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="jadwal.php">
-                                <i class="bi bi-calendar-event me-2"></i>Jadwal
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="gamifikasi.php">
-                                <i class="bi bi-trophy me-2"></i>Gamifikasi
-                            </a>
-                        </li>
+                        <li class="nav-item"><a class="nav-link" href="siswa.php"><i class="bi bi-house-door me-2"></i>Dashboard</a></li>
+                        <li class="nav-item"><a class="nav-link active" href="siswa.php"><i class="bi bi-book me-2"></i>Mata Pelajaran</a></li>
+                        <li class="nav-item"><a class="nav-link" href="kalender.php"><i class="bi bi-calendar-event me-2"></i>Jadwal</a></li>
+                        <li class="nav-item"><a class="nav-link" href="gamifikasi.php"><i class="bi bi-trophy me-2"></i>Gamifikasi</a></li>
                     </ul>
                 </div>
             </nav>
 
             <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4">
+                
+                <a href="siswa.php" class="btn btn-sm btn-outline-secondary rounded-pill mb-3 px-3">
+                    <i class="bi bi-arrow-left me-1"></i> Kembali ke Dashboard
+                </a>
 
-                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
-                    <h1 class="h2 fw-bold text-dark">Ruang Virtual Kelas</h1>
-                    <a href="siswa.php" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
-                        <i class="bi bi-arrow-left me-1"></i> Kembali ke Beranda
-                    </a>
+                <div class="card mapel-header-card p-4 mb-4">
+                    <span class="badge bg-danger mb-2 px-3 py-2 rounded-pill align-self-start small fw-bold">RUANG KELAS</span>
+                    <h2 class="fw-bold text-white mb-1"><?= htmlspecialchars($data_mapel['NamaMapel']) ?></h2>
+                    <p class="text-white-50 small mb-2"><i class="bi bi-person-workspace me-1"></i> Pengajar: <strong><?= htmlspecialchars($data_mapel['NamaGuru'] ?? 'Belum Ditentukan') ?></strong></p>
+                    <p class="text-white-50 mb-0 italic" style="font-size: 0.9rem;"><i class="bi bi-info-circle me-1"></i> <?= htmlspecialchars($data_mapel['Deskripsi'] ?? 'Tidak ada deskripsi mata pelajaran.') ?></p>
                 </div>
 
-                <div class="card hero-profile-card p-4 mb-4">
-                    <div class="position-relative z-1 py-2">
-                        <span class="badge bg-danger mb-2 px-3 py-2 rounded-pill small fw-bold" style="background-color: #dc3545 !important;">MATA PELAJARAN AKTIF</span>
-                        <h2 class="fw-bold text-white mb-1"><?= htmlspecialchars($mapel['NamaMapel']) ?></h2>
-                        <p class="text-white-50 mb-0"><i class="bi bi-person-badge me-2"></i>Guru Pengampu: <strong><?= htmlspecialchars($mapel['NamaGuru'] ?? 'Belum Ditentukan') ?></strong></p>
+                <h4 class="fw-bold text-dark mb-4"><i class="bi bi-card-list text-danger me-2"></i>Materi & Tugas Pembelajaran</h4>
+
+                <?php if(mysqli_num_rows($query_topik) == 0): ?>
+                    <div class="card text-center p-5 border-0 shadow-sm rounded-4">
+                        <i class="bi bi-folder-x text-muted fs-1 mb-2"></i>
+                        <p class="text-muted mb-0">Belum ada topik materi pembelajaran yang dibagikan untuk kelas ini.</p>
                     </div>
-                </div>
+                <?php else: ?>
+                    <?php while($topik = mysqli_fetch_assoc($query_topik)): ?>
+                        <?php $id_topik = $topik['IDTopik']; ?>
+                        
+                        <div class="card topik-card p-4">
+                            <h5 class="topik-title d-flex align-items-center justify-content-between">
+                                <span><i class="bi bi-tags-fill text-danger me-2"></i><?= htmlspecialchars($topik['NamaTopik']) ?></span>
+                                <span class="badge bg-light text-dark border small rounded-pill px-2.5 py-1" style="font-size: 0.75rem;">Topik Ke-<?= htmlspecialchars($topik['Urutan']) ?></span>
+                            </h5>
 
-                <div class="row g-4">
-                    <div class="col-lg-8">
-                        <h5 class="fw-bold mb-3 d-flex align-items-center text-dark">
-                            <i class="bi bi-journal-text text-danger me-2"></i> Bahan Ajar & Modul Pembelajaran
-                        </h5>
-                        <div class="card mapel-card p-2 mb-4">
-                            <?php if(mysqli_num_rows($query_materi) == 0): ?>
-                                <p class="text-muted small text-center my-4">Materi belum diunggah oleh guru pengampu.</p>
-                            <?php else: ?>
-                                <?php while($materi = mysqli_fetch_assoc($query_materi)): ?>
-                                    <div class="item-list-row">
-                                        <div>
-                                            <h6 class="mb-0 text-dark small fw-bold"><?= htmlspecialchars($materi['JudulMateri']) ?></h6>
-                                            <small class="text-muted" style="font-size:0.75rem;"><i class="bi bi-file-earmark-arrow-down"></i> Modul Belajar Digital</small>
-                                        </div>
-                                        <a href="../uploads/materi/<?= $materi['FileMateri'] ?>" target="_blank" class="btn btn-sm btn-danger text-white rounded-pill px-3" style="background: linear-gradient(135deg, #dc3545, #9b1c26); border: none; font-size:0.75rem;">
-                                            Unduh Modul
-                                        </a>
-                                    </div>
-                                <?php endwhile; ?>
-                            <?php endif; ?>
-                        </div>
-
-                        <h5 class="fw-bold mb-3 d-flex align-items-center text-dark">
-                            <i class="bi bi-collection text-danger me-2"></i> Daftar Tugas Terkait
-                        </h5>
-                        <div class="card mapel-card p-2">
-                            <?php if(mysqli_num_rows($query_tugas) == 0): ?>
-                                <p class="text-muted small text-center my-4">Tidak ada tugas mandiri khusus pada mata pelajaran ini.</p>
-                            <?php else: ?>
-                                <?php while($tgs = mysqli_fetch_assoc($query_tugas)): ?>
-                                    <div class="item-list-row">
-                                        <div>
-                                            <h6 class="mb-0 text-dark small fw-bold"><?= htmlspecialchars($tgs['JudulTugas']) ?></h6>
-                                            <small class="text-muted" style="font-size:0.75rem;"><i class="bi bi-clock"></i> Batas: <?= date('d M Y, H:i', strtotime($tgs['Deadline'])) ?> WIB</small>
-                                        </div>
-                                        <a href="tugas.php?id_tugas=<?= $tgs['IDTugas'] ?>" class="btn btn-sm btn-outline-danger rounded-pill px-3" style="font-size:0.75rem;">
-                                            Lihat Tugas
-                                        </a>
-                                    </div>
-                                <?php endwhile; ?>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-
-                    <div class="col-lg-4">
-                        <h5 class="fw-bold mb-3 d-flex align-items-center text-dark">
-                            <i class="bi bi-trophy-fill text-danger me-2"></i> Kuis & Evaluasi
-                        </h5>
-                        <div class="card mapel-card p-2">
-                            <div class="item-list-row">
-                                <div>
-                                    <h6 class="mb-0 text-dark small fw-bold">Evaluasi Pemahaman Materi 1</h6>
-                                    <small class="text-muted" style="font-size:0.75rem;"><i class="bi bi-hourglass-split"></i> Durasi: 15 Menit</small>
+                            <div class="row g-3 mt-1">
+                                <div class="col-md-6">
+                                    <h6 class="fw-bold text-primary mb-3"><i class="bi bi-file-earmark-text me-1"></i> Materi Bacaan</h6>
+                                    <?php 
+                                    $query_materi = mysqli_query($koneksi, "SELECT * FROM materi WHERE IDTopik = '$id_topik' AND IDMapel = '$id_mapel'");
+                                    if(mysqli_num_rows($query_materi) == 0):
+                                    ?>
+                                        <p class="text-muted small ps-2 italic"> Tidak ada materi di topik ini.</p>
+                                    <?php else: ?>
+                                        <?php while($materi = mysqli_fetch_assoc($query_materi)): ?>
+                                            <div class="item-materi p-3 mb-2 d-flex align-items-center justify-content-between">
+                                                <div class="d-flex align-items-center gap-3">
+                                                    <i class="bi bi-file-earmark-pdf-fill text-danger fs-4"></i>
+                                                    <div>
+                                                        <h6 class="mb-0 fw-semibold text-dark" style="font-size: 0.95rem;"><?= htmlspecialchars($materi['Judul']) ?></h6>
+                                                        <small class="text-muted d-block" style="font-size: 0.75rem;"><?= htmlspecialchars($materi['Deskripsi'] ?? 'Klik untuk membaca materi') ?></small>
+                                                    </div>
+                                                </div>
+                                                <a href="../guru/uploads/<?= htmlspecialchars($materi['Filepath']) ?>" class="btn btn-sm btn-outline-primary rounded-pill px-3" target="_blank">
+                                                    <i class="bi bi-eye me-1"></i> Baca
+                                                </a>
+                                            </div>
+                                        <?php endwhile; ?>
+                                    <?php endif; ?>
                                 </div>
-                                <button class="btn btn-sm btn-warning text-dark rounded-pill fw-bold px-3" style="font-size:0.75rem;" onclick="alert('Fitur pengerjaan kuis sedang dalam tahap sinkronisasi data database.')">
-                                    Mulai
-                                </button>
+
+                                <div class="col-md-6">
+                                    <h6 class="fw-bold text-danger mb-3"><i class="bi bi-clipboard-check me-1"></i> Tugas Siswa</h6>
+                                    <?php 
+                                    $query_tugas = mysqli_query($koneksi, "SELECT * FROM tugas WHERE IDTopik = '$id_topik' AND IDMapel = '$id_mapel'");
+                                    if(mysqli_num_rows($query_tugas) == 0):
+                                    ?>
+                                        <p class="text-muted small ps-2 italic"> Tidak ada tugas di topik ini.</p>
+                                    <?php else: ?>
+                                        <?php while($tugas = mysqli_fetch_assoc($query_tugas)): ?>
+                                            <div class="item-tugas p-3 mb-2 d-flex align-items-center justify-content-between">
+                                                <div class="d-flex align-items-center gap-3">
+                                                    <i class="bi bi-collection-play-fill text-danger fs-4"></i>
+                                                    <div>
+                                                        <h6 class="mb-0 fw-semibold text-dark" style="font-size: 0.95rem;"><?= htmlspecialchars($tugas['Judul']) ?></h6>
+                                                        <small class="text-danger d-block fw-medium" style="font-size: 0.75rem;">
+                                                            <i class="bi bi-alarm me-1"></i>Deadline: <?= date('d M Y, H:i', strtotime($tugas['Deadline'])) ?> Wib
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                                <a href="kerjakan_tugas.php?id_tugas=<?= urlencode($tugas['IDTugas']) ?>" class="btn btn-sm btn-danger text-white rounded-pill px-3" style="background: var(--primary-gradient); border:none;">
+                                                    Buka <i class="bi bi-arrow-right ms-1"></i>
+                                                </a>
+                                            </div>
+                                        <?php endwhile; ?>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </div>
+
+                    <?php endwhile; ?>
+                <?php endif; ?>
 
             </main>
         </div>
