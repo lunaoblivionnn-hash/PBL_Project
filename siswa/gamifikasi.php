@@ -16,10 +16,10 @@ $data_siswa = mysqli_fetch_assoc($query_siswa);
 $id_siswa = isset($data_siswa['IDSiswa']) ? $data_siswa['IDSiswa'] : '';
 
 // // 2. Ambil Riwayat Poin (XP) Siswa untuk Log Aktivitas Gamifikasi// GANTI BARIS 19 JADI SEPERTI INI:
-// $query_log = mysqli_query($koneksi, "SELECT * FROM log_xp WHERE IDSiswa = '$id_siswa' ORDER BY Tanggal DESC LIMIT 5");
+// $query_log = mysqli_query($koneksi, "SELECT * FROM log_xp WHERE IDSiswa = '$id_siswa' ORDER BY Tanggal DESC LIMIT 5\");
 
 // 3. Ambil Data Peringkat / Leaderboard Global Siswa
-// $query_leaderboard = mysqli_query($koneksi, "SELECT * FROM siswa ORDER BY TotalXP DESC LIMIT 10");
+// $query_leaderboard = mysqli_query($koneksi, "SELECT * FROM siswa ORDER BY TotalXP DESC LIMIT 10\");
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -36,24 +36,30 @@ $id_siswa = isset($data_siswa['IDSiswa']) ? $data_siswa['IDSiswa'] : '';
             --card-gradient: linear-gradient(135deg, #1e1e2f, #111119);
         }
         
-        body { 
+        /* Memaksa tinggi penuh layar tanpa margin bocor */
+        html, body { 
+            height: 100%;
+            margin: 0;
+            padding: 0;
             background-color: #f4f6f9; 
             color: #333; 
             font-family: 'Segoe UI', system-ui, sans-serif;
         }
         
         /* Navbar Atas - Merah Marun Gradasi */
-        .navbar-dark.bg-dark { 
+        .navbar-custom { 
             background: var(--primary-gradient) !important; 
             box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
         }
         
-        /* Sidebar Samping Menu Navigasi */
+        /* Sidebar Samping Menu Navigasi - Panjang Kebawah Penuh 1 Layar */
         .sidebar {
             background-color: #fff !important;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-            border-radius: 12px;
-            padding: 15px 10px;
+            box-shadow: 4px 0 12px rgba(0,0,0,0.05);
+            border-radius: 0px 12px 12px 0px;
+            padding: 20px 15px;
+            min-height: calc(100vh - 56px);
+            height: 100%;
         }
 
         .sidebar .nav-link {
@@ -94,7 +100,7 @@ $id_siswa = isset($data_siswa['IDSiswa']) ? $data_siswa['IDSiswa'] : '';
 
         /* Progress Bar XP Berkilau Emas */
         .progress {
-            background-color: rgba(255, 255, 255, 0.1) !important;
+            background-color: rgba(25, 25, 25, 0.2) !important;
             height: 10px;
             border-radius: 10px;
         }
@@ -136,54 +142,32 @@ $id_siswa = isset($data_siswa['IDSiswa']) ? $data_siswa['IDSiswa'] : '';
             border-color: #f1f1f1 !important;
             background-color: transparent !important;
         }
-
-        /* Navigasi Button */
-        .btn-primary {
-            background: var(--primary-gradient) !important;
-            border: none !important;
-        }
-
-        .btn-primary:hover {
-            opacity: 0.9;
-        }
     </style>
 </head>
 <body>
 
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
-        <div class="container-fluid">
-            <a class="navbar-brand fw-bold" href="index.html">🎓 LMS SMKN 1 Wongsorejo</a>
-            <div class="collapse navbar-collapse justify-content-end" id="topNav">
-                <ul class="navbar-nav align-items-center">
-                    <li class="nav-item me-3">
-                        <a class="nav-link position-relative" href="#">
-                            <i class="bi bi-bell-fill fs-5"></i>
-                            <span class="position-absolute top-25 start-75 translate-middle p-1 bg-danger border border-light rounded-circle">
-                                <span class="visually-hidden">Notifikasi Baru</span>
-                            </span>
-                        </a>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="profileDropdown" role="button" data-bs-toggle="dropdown">
-                            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=60" alt="Avatar" class="rounded-circle me-2" style="width: 32px; height: 32px; object-fit: cover;">
-                            <span>Siswa</span>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-menu-item" href="#"><i class="bi bi-person me-2"></i>Profil</a></li>
-                            <li><a class="dropdown-menu-item" href="#"><i class="bi bi-gear me-2"></i>Pengaturan</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-menu-item text-danger" href="#"><i class="bi bi-box-arrow-right me-2"></i>Keluar</a></li>
-                        </ul>
-                    </li>
-                </ul>
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom sticky-top py-2">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand fw-bold d-flex align-items-center" href="siswa.php">
+                <span class="fs-5 tracking-wide">🎓 LMS SMKN 1 Wongsorejo</span>
+            </a>
+            
+            <div class="d-flex align-items-center gap-3">
+                <div class="text-end text-white d-none d-md-block">
+                    <h6 class="mb-0 fw-bold small text-nowrap"><?= htmlspecialchars($data_siswa['Nama'] ?? 'Siswa') ?></h6>
+                    <small class="text-white-50 text-uppercase d-block" style="font-size: 0.65rem; letter-spacing: 0.5px;"><?= htmlspecialchars($data_siswa['Kelas'] ?? '') ?></small>
+                </div>
+                <div class="rounded-circle bg-white p-0.5 shadow-sm border border-2 border-white border-opacity-20">
+                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=60" alt="Avatar" class="rounded-circle" style="width: 35px; height: 35px; object-fit: cover;">
+                </div>
             </div>
         </div>
     </nav>
 
-    <div class="container-fluid my-4">
-        <div class="row">
+    <div class="container-fluid px-0">
+        <div class="row g-0">
             
-            <nav class="col-md-3 col-lg-2 d-md-block sidebar mb-4">
+            <nav class="col-md-3 col-lg-2 d-md-block sidebar">
                 <div class="position-sticky">
                     <ul class="nav flex-column">
                         <li class="nav-item">
@@ -192,12 +176,12 @@ $id_siswa = isset($data_siswa['IDSiswa']) ? $data_siswa['IDSiswa'] : '';
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#">
+                            <a class="nav-link" href="tugas.php">
                                 <i class="bi bi-book me-2"></i>Mata Pelajaran
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#">
+                            <a class="nav-link" href="kalender.php">
                                 <i class="bi bi-calendar-event me-2"></i>Jadwal
                             </a>
                         </li>
@@ -210,8 +194,8 @@ $id_siswa = isset($data_siswa['IDSiswa']) ? $data_siswa['IDSiswa'] : '';
                 </div>
             </nav>
 
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
                     <h1 class="h2 fw-bold text-dark">Pusat Gamifikasi</h1>
                 </div>
 
