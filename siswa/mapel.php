@@ -2,7 +2,7 @@
 session_start();
 require '../login/koneksi.php';
 
-// Pastikan yang masuk adalah akun dengan role siswa
+// Pastikan yang masuk adalah siswa
 if(!isset($_SESSION['role']) || $_SESSION['role'] != 'siswa'){
     header("Location: ../login/login.php"); exit;
 }
@@ -10,270 +10,294 @@ if(!isset($_SESSION['role']) || $_SESSION['role'] != 'siswa'){
 $id_user = $_SESSION['IDUser'] ?? '';
 $id_mapel = mysqli_real_escape_string($koneksi, $_GET['id_mapel'] ?? '');
 
-if(empty($id_mapel)){
-    header("Location: siswa.php"); exit;
-}
+if(empty($id_mapel)){ header("Location: siswa.php"); exit; }
 
-// 1. Ambil data siswa
+// 1. Ambil Data Siswa
 $query_siswa = mysqli_query($koneksi, "SELECT * FROM siswa WHERE IDUser='$id_user'");
 $siswa = mysqli_fetch_assoc($query_siswa);
 $id_siswa = $siswa['IDSiswa'] ?? '';
+$nama_lengkap = $siswa['Nama'] ?? $siswa['NamaSiswa'] ?? 'Siswa';
 
-// 2. Ambil detail mapel (Sesuai kolom asli: IDMapel, NamaMapel, IDGuru)
+// 2. Ambil Data Mapel
 $query_mapel = mysqli_query($koneksi, "
     SELECT m.*, g.NamaGuru 
     FROM mapel m 
     LEFT JOIN guru g ON m.IDGuru = g.IDGuru 
     WHERE m.IDMapel='$id_mapel'
 ");
-if(mysqli_num_rows($query_mapel) == 0){
-    header("Location: siswa.php"); exit;
-}
+if(mysqli_num_rows($query_mapel) == 0){ header("Location: siswa.php"); exit; }
 $mapel = mysqli_fetch_assoc($query_mapel);
 
-// 3. Ambil daftar materi
-$query_materi = mysqli_query($koneksi, "SELECT * FROM materi WHERE IDMapel='$id_mapel'");
+// 3. Ambil Daftar Topik/Bab
+$q_topik = mysqli_query($koneksi, "SELECT * FROM topik_mapel WHERE IDMapel = '$id_mapel' ORDER BY Urutan ASC");
+$daftar_topik = [];
+while($t = mysqli_fetch_assoc($q_topik)) { $daftar_topik[] = $t; }
 
-// 4. Ambil daftar tugas berkaitan dengan mapel ini
-$query_tugas = mysqli_query($koneksi, "SELECT * FROM tugas WHERE IDMapel='$id_mapel' ORDER BY Deadline ASC");
+// 4. Ambil Data Tugas yang Sudah Dikumpulkan Siswa Ini
+$q_kumpul = mysqli_query($koneksi, "SELECT IDTugas FROM pengumpulan_tugas WHERE IDSiswa = '$id_siswa'");
+$tugas_selesai = [];
+while($tk = mysqli_fetch_assoc($q_kumpul)) { $tugas_selesai[] = $tk['IDTugas']; }
 ?>
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ruang Kelas: <?= htmlspecialchars($mapel['NamaMapel']) ?> - LMS SMKN 1 Wongsorejo</title>
+    <title><?= htmlspecialchars($mapel['NamaMapel']) ?> - Ruang Kelas LMS</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     
     <style>
         :root {
-            --primary-gradient: linear-gradient(135deg, #dc3545, #9b1c26);
-            --card-gradient: linear-gradient(135deg, #1e1e2f, #111119);
+            --primary: #4f46e5;
+            --primary-dark: #3730a3;
+            --primary-light: #e0e7ff;
+            --secondary: #0ea5e9;
+            --gradient-primary: linear-gradient(135deg, #4f46e5, #0ea5e9);
+            --bg-light: #f8fafc;
+            --text-dark: #1e293b;
         }
         
-        html, body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f6f9; 
-            color: #333; 
-            font-family: 'Segoe UI', system-ui, sans-serif;
-        }
+        body { background-color: var(--bg-light); color: var(--text-dark); font-family: 'Segoe UI', system-ui, sans-serif; overflow-x: hidden; }
         
-        .navbar-custom { 
-            background: var(--primary-gradient) !important; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
-        }
-
-        .sidebar {
-            background-color: #fff !important;
-            box-shadow: 4px 0 12px rgba(0,0,0,0.05);
-            border-radius: 0px 12px 12px 0px;
-            padding: 20px 15px;
-            min-height: calc(100vh - 56px);
-            height: 100%;
-        }
-
-        .sidebar .nav-link {
-            color: #495057 !important;
-            font-weight: 500;
-            transition: all 0.2s ease;
-            border-radius: 8px;
-            margin-bottom: 4px;
-        }
-
-        .sidebar .nav-link:hover, .sidebar .nav-link.active {
-            background: rgba(220, 53, 69, 0.1) !important;
-            color: #dc3545 !important;
-        }
+        /* NAVBAR */
+        .navbar-custom { background: var(--gradient-primary) !important; box-shadow: 0 2px 10px rgba(0,0,0,0.1); padding: 10px 0; z-index: 1030;}
         
-        .hero-profile-card { 
-            background: var(--card-gradient) !important; 
-            color: white !important; 
-            border: none !important; 
-            border-radius: 20px; 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.15); 
-            overflow: hidden; 
-            position: relative; 
-        }
+        /* LAYOUT UTAMA */
+        #wrapper { display: flex; width: 100%; align-items: stretch; min-height: calc(100vh - 66px); }
         
-        .hero-profile-card::before { 
-            content: ''; 
-            position: absolute; 
-            top: -50%; 
-            right: -20%; 
-            width: 300px; 
-            height: 300px; 
-            background: rgba(220, 53, 69, 0.15); 
-            filter: blur(50px); 
-            border-radius: 50%; 
+        /* SIDEBAR KIRI (Daftar Isi Bab) */
+        #sidebar-course {
+            min-width: 300px; max-width: 300px;
+            background: #fff; border-right: 1px solid #e2e8f0;
+            position: sticky; top: 66px; height: calc(100vh - 66px);
+            overflow-y: auto; padding: 20px 15px;
         }
+        .course-index-title { font-size: 0.8rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; padding-left: 10px; }
+        .index-item {
+            display: block; padding: 12px 15px; color: #475569; text-decoration: none;
+            border-radius: 10px; font-weight: 600; font-size: 0.9rem; transition: 0.2s; margin-bottom: 5px;
+        }
+        .index-item:hover { background: var(--primary-light); color: var(--primary); }
+        .index-item.active { background: var(--primary); color: #fff; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.2); }
 
-        .mapel-card { 
-            border: none !important; 
-            border-radius: 16px; 
-            background-color: #fff !important; 
-            box-shadow: 0 5px 15px rgba(0,0,0,0.04); 
-            overflow: hidden; 
-        }
+        /* KONTEN TENGAH */
+        #main-content { width: 100%; padding: 40px; }
+        .page-title { font-weight: 800; font-size: 2.2rem; color: var(--text-dark); margin-bottom: 5px; text-transform: uppercase;}
+        .page-subtitle { color: #64748b; font-size: 1rem; margin-bottom: 40px; }
 
-        .item-list-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.85rem 1rem;
-            border-bottom: 1px solid #f1f3f5;
-            transition: background-color 0.2s ease;
-        }
+        /* ACCORDION / SECTION KONTEN */
+        .section-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; margin-bottom: 25px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); overflow: hidden;}
+        .section-header { padding: 20px 25px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; transition: 0.2s; }
+        .section-header:hover { background: #f8fafc; }
+        .section-title { font-weight: 700; color: var(--text-dark); font-size: 1.25rem; margin: 0; display: flex; align-items: center;}
+        .section-title i { color: #cbd5e1; margin-right: 15px; font-size: 1.4rem; transition: 0.3s;}
+        .section-header[aria-expanded="true"] .section-title i { transform: rotate(90deg); color: var(--primary); }
+        
+        .section-body { padding: 0 25px 25px 25px; }
 
-        .item-list-row:last-child {
-            border-bottom: none;
+        /* ITEM KONTEN (Materi & Tugas) */
+        .content-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 15px 20px; border: 1px solid #e2e8f0; border-radius: 12px;
+            margin-top: 15px; transition: 0.2s; background: #fff;
         }
+        .content-item:hover { border-color: #cbd5e1; box-shadow: 0 4px 12px rgba(0,0,0,0.03); transform: translateY(-2px); }
+        
+        .content-icon {
+            width: 45px; height: 45px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.4rem; margin-right: 20px; flex-shrink: 0;
+        }
+        .icon-materi { background: #e0e7ff; color: var(--primary); }
+        .icon-tugas { background: #dcfce7; color: #10b981; }
 
-        .item-list-row:hover {
-            background-color: #f8f9fa;
-        }
+        .content-info { flex-grow: 1; }
+        .content-title { font-weight: 700; color: var(--text-dark); margin-bottom: 3px; font-size: 1.05rem; }
+        .content-meta { font-size: 0.8rem; color: #64748b; font-weight: 500; }
 
-        .text-dark {
-            color: #212529 !important;
+        /* TOMBOL TANDAI SELESAI */
+        .btn-selesai {
+            border: 2px solid #cbd5e1; color: #64748b; background: transparent;
+            border-radius: 8px; font-weight: 700; font-size: 0.85rem;
+            padding: 8px 16px; transition: 0.3s; white-space: nowrap;
         }
+        .btn-selesai:hover { border-color: #10b981; color: #10b981; background: #f0fdf4; }
+        .btn-selesai.done { background: #10b981; border-color: #10b981; color: #fff; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); }
+
+        @media (max-width: 992px) { #sidebar-course { display: none; } #main-content { padding: 20px; } }
     </style>
 </head>
 <body>
 
-    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom sticky-top py-2">
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom sticky-top">
         <div class="container-fluid px-4">
-            <a class="navbar-brand fw-bold d-flex align-items-center" href="siswa.php">
-                <span class="fs-5 tracking-wide">🎓 LMS SMKN 1 Wongsorejo</span>
+            <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="siswa.php">
+                <i class="bi bi-mortarboard-fill fs-4"></i> LMS Wongsorejo
             </a>
-            
             <div class="d-flex align-items-center gap-3">
-                <div class="text-end text-white d-none d-md-block">
-                    <h6 class="mb-0 fw-bold small text-nowrap" style="font-size: 1.25rem"><?= htmlspecialchars($siswa['Nama'] ?? 'Siswa') ?></h6>
-                    <small class="text-white-50 text-uppercase d-block" style="font-size: 0.65rem; letter-spacing: 0.5px;"><?= htmlspecialchars($siswa['Kelas'] ?? '') ?></small>
-                </div>
-                <div class="rounded-circle bg-white p-0.5 shadow-sm border border-2 border-white border-opacity-20">
-                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=60" alt="Avatar" class="rounded-circle" style="width: 35px; height: 35px; object-fit: cover;">
-                </div>
+                <a href="siswa.php" class="btn btn-light btn-sm rounded-pill fw-bold px-3 text-primary shadow-sm">
+                    <i class="bi bi-arrow-left me-1"></i> Kembali ke Dashboard
+                </a>
             </div>
         </div>
     </nav>
 
-    <div class="container-fluid px-0">
-        <div class="row g-0">
+    <div id="wrapper">
+        
+        <nav id="sidebar-course">
+            <div class="course-index-title">DAFTAR ISI KELAS</div>
             
-            <nav class="col-md-3 col-lg-2 d-md-block sidebar">
-                <div class="position-sticky">
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link" href="siswa.php">
-                                <i class="bi bi-house-door me-2"></i>Dashboard
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link active" href="tugas.php">
-                                <i class="bi bi-book me-2"></i>Mata Pelajaran
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="jadwal.php">
-                                <i class="bi bi-calendar-event me-2"></i>Jadwal
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="gamifikasi.php">
-                                <i class="bi bi-trophy me-2"></i>Gamifikasi
-                            </a>
-                        </li>
-                    </ul>
+            <?php foreach($daftar_topik as $index => $tp): ?>
+                <a href="#section-<?= $tp['IDTopik'] ?>" class="index-item <?= $index == 0 ? 'active' : '' ?>" onclick="setActiveSidebar(this)">
+                    <?= htmlspecialchars($tp['NamaTopik']) ?>
+                </a>
+            <?php endforeach; ?>
+            
+            <?php if(empty($daftar_topik)): ?>
+                <div class="text-muted small italic ps-2">Belum ada bab dibuat oleh guru.</div>
+            <?php endif; ?>
+        </nav>
+
+        <main id="main-content">
+            
+            <h1 class="page-title"><?= htmlspecialchars($mapel['NamaMapel']) ?></h1>
+            <div class="page-subtitle"><i class="bi bi-person-video3 me-2"></i>Guru Pengampu: <strong class="text-primary"><?= htmlspecialchars($mapel['NamaGuru'] ?? 'Belum Ditentukan') ?></strong></div>
+
+            <?php foreach($daftar_topik as $index => $tp): 
+                $id_topik = $tp['IDTopik'];
+                $is_first = ($index == 0); // Buka otomatis bab pertama
+            ?>
+            
+            <div class="section-card" id="section-<?= $id_topik ?>">
+                <div class="section-header" data-bs-toggle="collapse" data-bs-target="#collapse<?= $id_topik ?>" aria-expanded="<?= $is_first ? 'true' : 'false' ?>">
+                    <h3 class="section-title"><i class="bi bi-chevron-right"></i> <?= htmlspecialchars($tp['NamaTopik']) ?></h3>
+                    <span class="text-primary small fw-bold" style="font-size: 0.85rem;">Buka / Tutup</span>
                 </div>
-            </nav>
+                
+                <div id="collapse<?= $id_topik ?>" class="collapse <?= $is_first ? 'show' : '' ?>">
+                    <div class="section-body">
+                        
+                        <?php 
+                        $ada_konten = false;
 
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4">
-
-                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
-                    <h1 class="h2 fw-bold text-dark">Ruang Virtual Kelas</h1>
-                    <a href="siswa.php" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
-                        <i class="bi bi-arrow-left me-1"></i> Kembali ke Beranda
-                    </a>
-                </div>
-
-                <div class="card hero-profile-card p-4 mb-4">
-                    <div class="position-relative z-1 py-2">
-                        <span class="badge bg-danger mb-2 px-3 py-2 rounded-pill small fw-bold" style="background-color: #dc3545 !important;">MATA PELAJARAN AKTIF</span>
-                        <h2 class="fw-bold text-white mb-1"><?= htmlspecialchars($mapel['NamaMapel']) ?></h2>
-                        <p class="text-white-50 mb-0"><i class="bi bi-person-badge me-2"></i>Guru Pengampu: <strong><?= htmlspecialchars($mapel['NamaGuru'] ?? 'Belum Ditentukan') ?></strong></p>
-                    </div>
-                </div>
-
-                <div class="row g-4">
-                    <div class="col-lg-8">
-                        <h5 class="fw-bold mb-3 d-flex align-items-center text-dark">
-                            <i class="bi bi-journal-text text-danger me-2"></i> Bahan Ajar & Modul Pembelajaran
-                        </h5>
-                        <div class="card mapel-card p-2 mb-4">
-                            <?php if(mysqli_num_rows($query_materi) == 0): ?>
-                                <p class="text-muted small text-center my-4">Materi belum diunggah oleh guru pengampu.</p>
-                            <?php else: ?>
-                                <?php while($materi = mysqli_fetch_assoc($query_materi)): ?>
-                                    <div class="item-list-row">
-                                        <div>
-                                            <h6 class="mb-0 text-dark small fw-bold"><?= htmlspecialchars($materi['JudulMateri']) ?></h6>
-                                            <small class="text-muted" style="font-size:0.75rem;"><i class="bi bi-file-earmark-arrow-down"></i> Modul Belajar Digital</small>
-                                        </div>
-                                        <a href="../uploads/materi/<?= $materi['FileMateri'] ?>" target="_blank" class="btn btn-sm btn-danger text-white rounded-pill px-3" style="background: linear-gradient(135deg, #dc3545, #9b1c26); border: none; font-size:0.75rem;">
-                                            Unduh Modul
-                                        </a>
+                        // 1. TAMPILKAN MATERI
+                        $q_materi = mysqli_query($koneksi, "SELECT * FROM materi WHERE IDMapel='$id_mapel' AND IDTopik='$id_topik'");
+                        while($mt = mysqli_fetch_assoc($q_materi)): $ada_konten = true; 
+                        ?>
+                            <div class="content-item">
+                                <div class="d-flex align-items-center flex-grow-1" style="cursor: pointer;" onclick="window.open('../dokumen_materi/<?= htmlspecialchars($mt['Filepath']) ?>', '_blank')">
+                                    <div class="content-icon icon-materi"><i class="bi bi-file-earmark-text-fill"></i></div>
+                                    <div class="content-info">
+                                        <div class="content-title"><?= htmlspecialchars($mt['Judul']) ?></div>
+                                        <div class="content-meta">Materi Pembelajaran • PDF/Dokumen</div>
                                     </div>
-                                <?php endwhile; ?>
-                            <?php endif; ?>
-                        </div>
-
-                        <h5 class="fw-bold mb-3 d-flex align-items-center text-dark">
-                            <i class="bi bi-collection text-danger me-2"></i> Daftar Tugas Terkait
-                        </h5>
-                        <div class="card mapel-card p-2">
-                            <?php if(mysqli_num_rows($query_tugas) == 0): ?>
-                                <p class="text-muted small text-center my-4">Tidak ada tugas mandiri khusus pada mata pelajaran ini.</p>
-                            <?php else: ?>
-                                <?php while($tgs = mysqli_fetch_assoc($query_tugas)): ?>
-                                    <div class="item-list-row">
-                                        <div>
-                                            <h6 class="mb-0 text-dark small fw-bold"><?= htmlspecialchars($tgs['JudulTugas']) ?></h6>
-                                            <small class="text-muted" style="font-size:0.75rem;"><i class="bi bi-clock"></i> Batas: <?= date('d M Y, H:i', strtotime($tgs['Deadline'])) ?> WIB</small>
-                                        </div>
-                                        <a href="tugas.php?id_tugas=<?= $tgs['IDTugas'] ?>" class="btn btn-sm btn-outline-danger rounded-pill px-3" style="font-size:0.75rem;">
-                                            Lihat Tugas
-                                        </a>
-                                    </div>
-                                <?php endwhile; ?>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-
-                    <div class="col-lg-4">
-                        <h5 class="fw-bold mb-3 d-flex align-items-center text-dark">
-                            <i class="bi bi-trophy-fill text-danger me-2"></i> Kuis & Evaluasi
-                        </h5>
-                        <div class="card mapel-card p-2">
-                            <div class="item-list-row">
-                                <div>
-                                    <h6 class="mb-0 text-dark small fw-bold">Evaluasi Pemahaman Materi 1</h6>
-                                    <small class="text-muted" style="font-size:0.75rem;"><i class="bi bi-hourglass-split"></i> Durasi: 15 Menit</small>
                                 </div>
-                                <button class="btn btn-sm btn-warning text-dark rounded-pill fw-bold px-3" style="font-size:0.75rem;" onclick="alert('Fitur pengerjaan kuis sedang dalam tahap sinkronisasi data database.')">
-                                    Mulai
+                                <button class="btn-selesai" onclick="toggleSelesai(this, 'materi_<?= $mt['IDMateri'] ?>')">
+                                    <i class="bi bi-circle me-1"></i> Tandai Selesai
                                 </button>
                             </div>
-                        </div>
+                        <?php endwhile; ?>
+
+                        // 2. TAMPILKAN TUGAS
+                        <?php 
+                        $q_tugas = mysqli_query($koneksi, "SELECT * FROM tugas WHERE IDMapel='$id_mapel' AND IDTopik='$id_topik'");
+                        while($tg = mysqli_fetch_assoc($q_tugas)): 
+                            $ada_konten = true; 
+                            $sudah_kumpul = in_array($tg['IDTugas'], $tugas_selesai);
+                        ?>
+                            <div class="content-item">
+                                <div class="d-flex align-items-center flex-grow-1" style="cursor: pointer;" onclick="window.location.href='tugas.php?id_tugas=<?= $tg['IDTugas'] ?>'">
+                                    <div class="content-icon icon-tugas"><i class="bi bi-journal-check"></i></div>
+                                    <div class="content-info">
+                                        <div class="content-title"><?= htmlspecialchars($tg['Judul']) ?></div>
+                                        <div class="content-meta text-danger"><i class="bi bi-clock-history me-1"></i> Tenggat: <?= date('d M Y, H:i', strtotime($tg['Deadline'])) ?></div>
+                                    </div>
+                                </div>
+                                
+                                <?php if($sudah_kumpul): ?>
+                                    <button class="btn-selesai done" disabled style="cursor: default;">
+                                        <i class="bi bi-check-circle-fill me-1"></i> Telah Dikumpulkan
+                                    </button>
+                                <?php else: ?>
+                                    <button class="btn-selesai" onclick="window.location.href='tugas.php?id_tugas=<?= $tg['IDTugas'] ?>'">
+                                        <i class="bi bi-pencil-square me-1"></i> Kerjakan Tugas
+                                    </button>
+                                <?php endif; ?>
+                            </div>
+                        <?php endwhile; ?>
+
+                        <?php if(!$ada_konten): ?>
+                            <div class="text-center py-4">
+                                <div class="text-muted small p-3 bg-light rounded border border-dashed">Belum ada materi atau tugas di bab ini.</div>
+                            </div>
+                        <?php endif; ?>
+
                     </div>
                 </div>
+            </div>
+            
+            <?php endforeach; ?>
 
-            </main>
-        </div>
+        </main>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        // Fitur mengubah warna menu sidebar saat di klik
+        function setActiveSidebar(element) {
+            document.querySelectorAll('.index-item').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+        }
+
+        // Fitur Efek Animasi "Tandai Selesai" untuk Materi
+        function toggleSelesai(btn, idItem) {
+            // Cek apakah sudah hijau
+            let isDone = btn.classList.contains('done');
+            
+            if(!isDone) {
+                // Berubah jadi Hijau Selesai
+                btn.classList.add('done');
+                btn.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Selesai';
+                
+                // Simpan state di LocalStorage browser (sebagai simulasi sebelum masuk database)
+                localStorage.setItem(idItem, 'selesai');
+
+                // Notifikasi Pemanis
+                Swal.fire({
+                    title: 'Hebat!',
+                    text: 'Anda telah menyelesaikan materi ini. Progress belajar Anda meningkat!',
+                    icon: 'success',
+                    toast: true,
+                    position: 'bottom-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true
+                });
+            } else {
+                // Batal Selesai
+                btn.classList.remove('done');
+                btn.innerHTML = '<i class="bi bi-circle me-1"></i> Tandai Selesai';
+                localStorage.removeItem(idItem);
+            }
+        }
+
+        // Jalankan saat halaman dimuat: Cek memori browser untuk materi yang sudah ditandai selesai
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.btn-selesai').forEach(btn => {
+                let idItem = btn.getAttribute('onclick');
+                if(idItem && idItem.includes('toggleSelesai')) {
+                    // Ekstrak ID dari string onclick
+                    let match = idItem.match(/'([^']+)'/);
+                    if(match && localStorage.getItem(match[1]) === 'selesai') {
+                        btn.classList.add('done');
+                        btn.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Selesai';
+                    }
+                }
+            });
+        });
+    </script>
 </body>
 </html>
