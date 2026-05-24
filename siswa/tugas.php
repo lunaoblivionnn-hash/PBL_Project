@@ -28,67 +28,19 @@ if($mode_detail) {
     if(mysqli_num_rows($query_tugas) == 0) { header("Location: siswa.php"); exit; }
     $tugas = mysqli_fetch_assoc($query_tugas);
 
-    // Cek status kumpul siswa saat ini
+    // Menggunakan nama tabel pengumpulan_tugas
     $query_kumpul = mysqli_query($koneksi, "SELECT * FROM pengumpulan_tugas WHERE IDTugas='$id_tugas' AND IDSiswa='$id_siswa'");
     $kumpul = mysqli_fetch_assoc($query_kumpul);
+    $sudah_kumpul = !empty($kumpul);
 } else {
-    // Ambil semua daftar tugas yang harus dikerjakan siswa
-    $query_semua_tugas = mysqli_query($koneksi, "
-        SELECT t.*, m.NamaMapel, pt.Status, pt.Nilai 
-        FROM tugas t 
+    // PENYESUAIAN: kt.IDKumpul diganti menjadi kt.IDPengumpulan sesuai database asli kamu
+    $query_daftar_tugas = mysqli_query($koneksi, "
+        SELECT t.*, m.NamaMapel, kt.IDPengumpulan, kt.Nilai, kt.Status
+        FROM tugas t
         JOIN mapel m ON t.IDMapel = m.IDMapel
-        LEFT JOIN pengumpulan_tugas pt ON t.IDTugas = pt.IDTugas AND pt.IDSiswa = '$id_siswa'
+        LEFT JOIN pengumpulan_tugas kt ON t.IDTugas = kt.IDTugas AND kt.IDSiswa = '$id_siswa'
         ORDER BY t.Deadline ASC
     ");
-}
-
-// PROSES SUBMIT FILE JAWABAN
-if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_tugas'])) {
-    $id_t_post = mysqli_real_escape_string($koneksi, $_POST['id_tugas']);
-    $dl_check = mysqli_fetch_assoc(mysqli_query($koneksi, "SELECT Deadline FROM tugas WHERE IDTugas='$id_t_post'"));
-    
-    if(isset($_FILES['file_jawaban']) && $_FILES['file_jawaban']['error'] === UPLOAD_ERR_OK) {
-        $file = $_FILES['file_jawaban'];
-        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-        $allowed = ['pdf', 'doc', 'docx', 'zip', 'rar', 'jpg', 'png'];
-        
-        if(!in_array($ext, $allowed)) {
-            echo "<script>alert('Format file tidak diizinkan! Gunakan PDF, Word, Image atau RAR/ZIP.'); history.back();</script>";
-            exit;
-        }
-
-        $dir = "../uploads/tugas/";
-        if(!is_dir($dir)) mkdir($dir, 0755, true);
-        
-        $filename = "JAWAB_" . $id_t_post . "_" . $id_siswa . "_" . time() . "." . $ext;
-        
-        if(move_uploaded_file($file['tmp_name'], $dir . $filename)) {
-            $status = (strtotime($dl_check['Deadline']) < time()) ? 'terlambat' : 'sudah_dinilai'; 
-            // Jika guru belum menilai, default label status di database menyesuaikan logic system web Anda (e.g. 'belum_dinilai')
-            $status = 'belum_dinilai'; 
-
-            // Cek apakah update atau insert baru
-            $cek_eksistensi = mysqli_query($koneksi, "SELECT IDPengumpulan FROM pengumpulan_tugas WHERE IDTugas='$id_t_post' AND IDSiswa='$id_siswa'");
-            if(mysqli_num_rows($cek_eksistensi) > 0) {
-                $sql_save = "UPDATE pengumpulan_tugas SET FileJawaban='$filename', TanggalKirim=NOW(), Status='$status' WHERE IDTugas='$id_t_post' AND IDSiswa='$id_siswa'";
-            } else {
-                // Generate ID pengumpulan jika dibutuhkan string primer manual
-                $res_id = mysqli_fetch_assoc(mysqli_query($koneksi, "SELECT IDPengumpulan FROM pengumpulan_tugas ORDER BY IDPengumpulan DESC LIMIT 1"));
-                $num = $res_id ? ((int)$res_id['IDPengumpulan'] + 1) : 1;
-                
-                $sql_save = "INSERT INTO pengumpulan_tugas (IDPengumpulan, IDTugas, IDSiswa, FileJawaban, TanggalKirim, Status, Nilai) VALUES ($num, '$id_t_post', '$id_siswa', '$filename', NOW(), '$status', NULL)";
-            }
-
-            if(mysqli_query($koneksi, $sql_save)) {
-                echo "<script>alert('Tugas Berhasil Dikumpulkan!'); window.location='tugas.php?id_tugas=$id_t_post';</script>";
-            } else {
-                echo "<script>alert('Gagal menyimpan ke database.'); history.back();</script>";
-            }
-        }
-    } else {
-        echo "<script>alert('Silakan pilih file jawaban valid terlebih dahulu.'); history.back();</script>";
-    }
-    exit;
 }
 ?>
 <!DOCTYPE html>
@@ -96,151 +48,294 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_tugas'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kotak Tugas - LMS Siswa</title>
+    <title>Mata Pelajaran & Tugas - LMS SMKN 1 Wongsorejo</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    
     <style>
-        :root { --bg-dark: #111119; --card-dark: #1a1a26; --accent-blue: #4f46e5; }
-        body { background-color: var(--bg-dark); color: #e2e8f0; font-family: 'Segoe UI', system-ui, sans-serif; }
-        .glass-sidebar { background: rgba(26, 26, 38, 0.6); backdrop-filter: blur(12px); border-right: 1px solid rgba(255,255,255,0.08); min-height: 100vh; position: fixed; }
-        .glass-card { background: rgba(26, 26, 38, 0.6); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; }
-        .nav-link-custom { color: #94a3b8; border-radius: 10px; padding: 11px 16px; display: flex; align-items: center; gap: 12px; font-size: 0.9rem; transition: 0.2s; text-decoration: none; }
-        .nav-link-custom:hover, .nav-link-custom.active { background: var(--accent-blue); color: #fff; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3); }
-        .badge-status { font-size: 0.75rem; padding: 5px 12px; border-radius: 20px; font-weight: 600; display: inline-block; }
-        .status-belum { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
-        .status-sudah { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
+        :root {
+            --primary-gradient: linear-gradient(135deg, #dc3545, #9b1c26);
+            --card-gradient: linear-gradient(135deg, #1e1e2f, #111119);
+        }
+        
+        /* Memaksa landasan utama menggunakan tinggi penuh layar tanpa bocor margin */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f6f9; 
+            color: #333; 
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+        
+        /* Navbar Utama Merah Marun Gradasi */
+        .navbar-custom { 
+            background: var(--primary-gradient) !important; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
+        }
+
+        /* Sidebar Samping - Panjang Kebawah Penuh 1 Layar Sempurna */
+        .sidebar {
+            background-color: #fff !important;
+            box-shadow: 4px 0 12px rgba(0,0,0,0.05);
+            border-radius: 0px 12px 12px 0px;
+            padding: 20px 15px;
+            min-height: calc(100vh - 56px);
+            height: 100%;
+        }
+
+        .sidebar .nav-link {
+            color: #495057 !important;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            border-radius: 8px;
+            margin-bottom: 4px;
+        }
+
+        .sidebar .nav-link:hover, .sidebar .nav-link.active {
+            background: rgba(220, 53, 69, 0.1) !important;
+            color: #dc3545 !important;
+        }
+        
+        /* Hero Banner Menggunakan Card Gradient Gelap */
+        .hero-profile-card { 
+            background: var(--card-gradient) !important; 
+            color: white !important; 
+            border: none !important; 
+            border-radius: 20px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15); 
+            overflow: hidden; 
+            position: relative; 
+        }
+        
+        .hero-profile-card::before { 
+            content: ''; 
+            position: absolute; 
+            top: -50%; 
+            right: -20%; 
+            width: 300px; 
+            height: 300px; 
+            background: rgba(220, 53, 69, 0.15); 
+            filter: blur(50px); 
+            border-radius: 50%; 
+        }
+
+        /* Card Box Konten Putih Rapi */
+        .mapel-card { 
+            border: none !important; 
+            border-radius: 16px; 
+            background-color: #fff !important; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.04); 
+            overflow: hidden; 
+        }
+
+        .mapel-card h4, .mapel-card h5, .mapel-card th, .mapel-card td {
+            color: #212529 !important;
+        }
+
+        /* Status Badge Pengumpulan Tugas */
+        .badge-status {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.4rem 0.8rem;
+            border-radius: 50px;
+            display: inline-block;
+        }
+        .status-sudah {
+            background-color: rgba(25, 135, 84, 0.1) !important;
+            color: #198754 !important;
+        }
+        .status-belum {
+            background-color: rgba(220, 53, 69, 0.1) !important;
+            color: #dc3545 !important;
+        }
+
+        .form-control:focus {
+            border-color: #dc3545;
+            box-shadow: 0 0 0 0.25px rgba(220, 53, 69, 0.25);
+        }
+
+        .table th {
+            border-top: none;
+            background-color: #f8f9fa !important;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
 
-    <div class="container-fluid">
-        <div class="row">
-            <div class="col-md-3 col-lg-2 d-none d-md-block glass-sidebar p-3">
-                <div class="d-flex align-items-center gap-2 mb-4 px-2 py-3">
-                    <span class="fs-4">🎓</span>
-                    <h6 class="mb-0 fw-bold text-white tracking-wide">LMS SMKN 1</h6>
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom sticky-top py-2">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand fw-bold d-flex align-items-center" href="siswa.php">
+                <span class="fs-5 tracking-wide">🎓 LMS SMKN 1 Wongsorejo</span>
+            </a>
+            
+            <div class="d-flex align-items-center gap-3">
+                <div class="text-end text-white d-none d-md-block">
+                    <h6 class="mb-0 fw-bold small text-nowrap"><?= htmlspecialchars($siswa['Nama'] ?? 'Siswa') ?></h6>
+                    <small class="text-white-50 text-uppercase d-block" style="font-size: 0.65rem; letter-spacing: 0.5px;"><?= htmlspecialchars($siswa['Kelas'] ?? '') ?></small>
                 </div>
-                <div class="d-flex flex-column gap-1">
-                    <a href="siswa.php" class="nav-link-custom"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
-                    <a href="siswa.php" class="nav-link-custom"><i class="bi bi-book"></i> Kelas Saya</a>
-                    <a href="tugas.php" class="nav-link-custom active"><i class="bi bi-journal-bookmark"></i> Cek Tugas</a>
-                    <a href="gamifikasi.php" class="nav-link-custom"><i class="bi bi-trophy"></i> Papan Skor</a>
-                    <hr class="text-white-50">
-                    <a href="../login/logout.php" class="nav-link-custom text-danger"><i class="bi bi-box-arrow-right"></i> Keluar</a>
+                <div class="rounded-circle bg-white p-0.5 shadow-sm border border-2 border-white border-opacity-20">
+                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=60" alt="Avatar" class="rounded-circle" style="width: 35px; height: 35px; object-fit: cover;">
                 </div>
             </div>
+        </div>
+    </nav>
 
-            <div class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4">
-                
+    <div class="container-fluid px-0">
+        <div class="row g-0">
+            
+            <nav class="col-md-3 col-lg-2 d-md-block sidebar">
+                <div class="position-sticky">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="siswa.php">
+                                <i class="bi bi-house-door me-2"></i>Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="tugas.php">
+                                <i class="bi bi-book me-2"></i>Mata Pelajaran
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="kalender.php">
+                                <i class="bi bi-calendar-event me-2"></i>Jadwal
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="gamifikasi.php">
+                                <i class="bi bi-trophy me-2"></i>Gamifikasi
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4">
+
                 <?php if($mode_detail): ?>
-                    <div class="mb-3">
-                        <a href="tugas.php" class="text-decoration-none text-muted small"><i class="bi bi-chevron-left"></i> Kembali ke Daftar Semua Tugas</a>
+                    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+                        <h1 class="h2 fw-bold text-dark">Detail Lembar Tugas</h1>
+                        <a href="tugas.php" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+                            <i class="bi bi-arrow-left me-1"></i> Kembali ke Daftar
+                        </a>
                     </div>
 
                     <div class="row g-4">
-                        <div class="col-lg-7">
-                            <div class="glass-card p-4 h-100">
-                                <span class="badge bg-secondary mb-2" style="font-size:0.75rem;"><?= htmlspecialchars($tugas['NamaMapel']) ?></span>
-                                <h4 class="fw-bold text-white mb-1"><?= htmlspecialchars($tugas['Judul']) ?></h4>
-                                <p class="text-danger small"><i class="bi bi-calendar-event me-1"></i> Batas Pengumpulan: <?= date('d F Y, H:i', strtotime($tugas['Deadline'])) ?></p>
-                                <hr class="text-white-50">
-                                <h6 class="fw-bold text-white small mb-2">Instruksi Tugas:</h6>
-                                <p class="text-muted small" style="line-height:1.6; white-space: pre-wrap;"><?= htmlspecialchars($tugas['Deskripsi'] ?? 'Tidak ada deskripsi instruksi tambahan.') ?></p>
+                        <div class="col-lg-8">
+                            <div class="card mapel-card p-4 mb-4">
+                                <span class="badge bg-danger bg-opacity-10 text-danger rounded mb-3 px-2.5 py-1.5 small fw-bold align-self-start" style="color: #dc3545 !important; background-color: rgba(220,53,69,0.1) !important;">
+                                    <?= htmlspecialchars($tugas['NamaMapel']) ?>
+                                </span>
+                                <h3 class="fw-bold text-dark mb-2"><?= htmlspecialchars($tugas['JudulTugas']) ?></h3>
+                                <p class="text-muted small mb-4"><i class="bi bi-clock-history me-1"></i> Batas Pengumpulan: <strong class="text-danger"><?= date('d M Y, H:i', strtotime($tugas['Deadline'])) ?> WIB</strong></p>
+                                
+                                <h5 class="fw-bold text-dark border-bottom pb-2 mb-3">Deskripsi / Instruksi Tugas:</h5>
+                                <p class="text-secondary" style="line-height: 1.6;"><?= nl2br(htmlspecialchars($tugas['Deskripsi'])) ?></p>
                             </div>
                         </div>
 
-                        <div class="col-lg-5">
-                            <div class="glass-card p-4">
-                                <h5 class="fw-bold text-white mb-3"><i class="bi bi-upload me-2 text-primary"></i>Pengumpulan Jawaban</h5>
+                        <div class="col-lg-4">
+                            <div class="card mapel-card p-4">
+                                <h5 class="fw-bold text-dark mb-3"><i class="bi bi-cloud-arrow-up text-danger me-2"></i>Status Pengumpulan</h5>
                                 
-                                <?php if($kumpul): ?>
-                                    <div class="p-3 rounded mb-3" style="background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.1);">
-                                        <div class="d-flex justify-content-between align-items-center mb-2">
-                                            <small class="text-muted">Status Pengiriman:</small>
-                                            <span class="badge-status status-sudah">Sudah Dikumpulkan</span>
+                                <?php if($sudah_kumpul): ?>
+                                    <div class="alert alert-success border-0 rounded-3 d-flex align-items-start gap-2 mb-3">
+                                        <i class="bi bi-check-circle-fill mt-0.5"></i>
+                                        <div>
+                                            <span class="fw-bold d-block small">Tugas Telah Dikumpulkan!</span>
+                                            <span class="small opacity-75">Selesai pada: <?= date('d M Y, H:i', strtotime($kumpul['TanggalKumpul'])) ?> WIB</span>
                                         </div>
-                                        <small class="text-white d-block text-truncate mb-2"><i class="bi bi-file-earmark-check me-1"></i> <?= htmlspecialchars($kumpul['FileJawaban']) ?></small>
-                                        <small class="text-muted d-block" style="font-size:0.7rem;"><i class="bi bi-check-all"></i> Dikirim pada: <?= date('d/m/Y H:i', strtotime($kumpul['TanggalKirim'])) ?></small>
                                     </div>
-
-                                    <div class="p-3 rounded mb-4" style="background: rgba(79, 70, 229, 0.08); border: 1px solid rgba(79, 70, 229, 0.2);">
-                                        <small class="text-white-50 d-block mb-1">Nilai Perolehan:</small>
-                                        <h2 class="fw-bold text-warning mb-1"><?= $kumpul['Nilai'] !== null ? $kumpul['Nilai'] : '<span class="text-muted fs-5 fw-normal">Belum Dinilai</span>' ?> <span class="fs-6 text-muted fw-normal">/ <?= $tugas['PoinMaksimal'] ?></span></h2>
-                                        <?php if(!empty($kumpul['KomentarGuru'])): ?>
-                                            <small class="text-muted d-block mt-2"><strong>Catatan Guru:</strong> "<?= htmlspecialchars($kumpul['KomentarGuru']) ?>"</small>
-                                        <?php endif; ?>
+                                    <div class="p-3 bg-light rounded-3 mb-3">
+                                        <small class="text-muted d-block mb-1">Catatan Berkas Anda:</small>
+                                        <a href="../uploads/tugas/<?= $kumpul['FileKumpul'] ?>" target="_blank" class="text-decoration-none fw-semibold text-truncate d-block small"><i class="bi bi-file-earmark-text me-1"></i> Lihat Berkas Terkirim</a>
+                                    </div>
+                                    <div class="text-center py-2">
+                                        <span class="text-muted small d-block mb-1">Nilai Evaluasi:</span>
+                                        <h2 class="fw-bold text-success mb-0"><?= $kumpul['Nilai'] ?? 'Belum Dinilai' ?></h2>
                                     </div>
                                 <?php else: ?>
-                                    <div class="alert alert-warning border-0 bg-warning bg-opacity-10 text-warning small mb-4">
-                                        Anda belum mengirimkan lembar kerja untuk tugas ini.
+                                    <div class="alert alert-warning border-0 rounded-3 d-flex align-items-start gap-2 mb-4">
+                                        <i class="bi bi-exclamation-circle-fill mt-0.5"></i>
+                                        <span class="small fw-semibold">Anda belum mengirimkan lembar jawaban berkas tugas ini.</span>
                                     </div>
+                                    
+                                    <form action="proses_kumpul_tugas.php" method="POST" enctype="multipart/form-data">
+                                        <input type="hidden" name="id_tugas" value="<?= $id_tugas ?>">
+                                        <div class="mb-3">
+                                            <label class="form-label small fw-bold text-dark">Unggah Berkas Jawaban (PDF/DOCX/ZIP):</label>
+                                            <input type="file" class="form-control form-control-sm rounded-3" name="file_tugas" required>
+                                        </div>
+                                        <button type="submit" class="btn btn-danger w-100 rounded-pill fw-semibold py-2" style="background: linear-gradient(135deg, #dc3545, #9b1c26); border: none;">
+                                            Kirim Tugas Sekarang
+                                        </button>
+                                    </form>
                                 <?php endif; ?>
-
-                                <form action="tugas.php" method="POST" enctype="multipart/form-data">
-                                    <input type="hidden" name="id_tugas" value="<?= $tugas['IDTugas'] ?>">
-                                    <div class="mb-3">
-                                        <label class="form-label text-white-50 small fw-semibold">Pilih File Jawaban (PDF, DOCX, ZIP, Max 10MB)</label>
-                                        <input type="file" name="file_jawaban" class="form-control bg-dark text-white border-secondary small" required>
-                                    </div>
-                                    <button type="submit" name="submit_tugas" class="btn btn-primary w-100 fw-bold py-2" style="background: var(--accent-blue); border:none; border-radius:10px;">
-                                        <i class="bi bi-cloud-arrow-up-fill me-1"></i> <?= $kumpul ? 'Perbarui Jawaban' : 'Kirim Jawaban' ?>
-                                    </button>
-                                </form>
                             </div>
                         </div>
                     </div>
 
                 <?php else: ?>
-                    <h4 class="fw-bold text-white mb-1"><i class="bi bi-journal-bookmark text-primary me-2"></i>Semua Tugas Aktif</h4>
-                    <p class="text-muted small mb-4">Berikut adalah daftar seluruh penugasan Anda lintas mata pelajaran.</p>
+                    <div class="card hero-profile-card p-4 mb-4">
+                        <div class="position-relative z-1 py-2">
+                            <span class="badge bg-danger mb-2 px-3 py-2 rounded-pill small fw-bold" style="background-color: #dc3545 !important;">DAFTAR AKUMULASI</span>
+                            <h2 class="fw-bold text-white mb-1">Pusat Informasi Tugas Mandiri</h2>
+                            <p class="text-white-50 mb-0"><i class="bi bi-check2-circle me-2"></i>Pantau dan kumpulkan seluruh tugas mata pelajaran siswa secara berkala sebelum batas waktu berakhir.</p>
+                        </div>
+                    </div>
 
-                    <div class="glass-card p-3">
-                        <div class="table-responsive">
-                            <table class="table table-dark table-hover mb-0 align-middle" style="--bs-table-bg:transparent;">
-                                <thead class="text-muted small" style="border-bottom: 1px solid rgba(255,255,255,0.08)">
-                                    <tr>
-                                        <th>Mata Pelajaran</th>
-                                        <th>Judul Tugas</th>
-                                        <th>Batas Waktu</th>
-                                        <th>Status Kerja</th>
-                                        <th class="text-end">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="small">
-                                    <?php if(mysqli_num_rows($query_semua_tugas) == 0): ?>
-                                        <tr>
-                                            <td colspan="5" class="text-center text-muted py-4">Hebat! Tidak ada tugas tersisa yang perlu dikerjakan.</td>
+                    <div class="card mapel-card">
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead>
+                                        <tr class="text-dark">
+                                            <th class="py-3 px-4" style="border-top-left-radius: 16px;">Mata Pelajaran</th>
+                                            <th class="py-3">Topik Judul Tugas</th>
+                                            <th class="py-3">Batas Waktu (Deadline)</th>
+                                            <th class="py-3">Status Evaluasi</th>
+                                            <th class="py-3 px-4 text-end" style="border-top-right-radius: 16px;">Aksi</th>
                                         </tr>
-                                    <?php else: ?>
-                                        <?php while($row = mysqli_fetch_assoc($query_semua_tugas)): 
-                                            $is_done = ($row['Status'] != null);
-                                        ?>
-                                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.04)">
-                                                <td class="fw-bold text-white"><?= htmlspecialchars($row['NamaMapel']) ?></td>
-                                                <td><?= htmlspecialchars($row['Judul']) ?></td>
-                                                <td class="text-danger"><?= date('d/m H:i', strtotime($row['Deadline'])) ?></td>
-                                                <td>
-                                                    <?php if($is_done): ?>
-                                                        <span class="badge-status status-sudah">Selesai (Score: <?= $row['Nilai'] ?? '-' ?>)</span>
-                                                    <?php else: ?>
-                                                        <span class="badge-status status-belum">Belum Selesai</span>
-                                                    <?php endif; ?>
-                                                </td>
-                                                <td class="text-end">
-                                                    <a href="tugas.php?id_tugas=<?= $row['IDTugas'] ?>" class="btn btn-sm btn-outline-primary rounded-pill px-3">
-                                                        Detail
-                                                    </a>
-                                                </td>
+                                    </thead>
+                                    <tbody>
+                                        <?php if(mysqli_num_rows($query_daftar_tugas) == 0): ?>
+                                            <tr>
+                                                <td colspan="5" class="text-center py-5 text-muted">Luar biasa! Tidak ada tanggungan tugas aktif untuk saat ini.</td>
                                             </tr>
-                                        <?php endwhile; ?>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
+                                        <?php else: ?>
+                                            <?php while($row = mysqli_fetch_assoc($query_daftar_tugas)): 
+                                                // PENYESUAIAN: Menggunakan IDPengumpulan hasil fetch sinkronisasi database
+                                                $is_done = !empty($row['IDPengumpulan']);
+                                            ?>
+                                                <tr>
+                                                    <td class="py-3 px-4 fw-semibold text-dark"><?= htmlspecialchars($row['NamaMapel']) ?></td>
+                                                    <td class="text-dark"><?= htmlspecialchars($row['JudulTugas']) ?></td>
+                                                    <td class="text-muted small"><?= date('d M Y, H:i', strtotime($row['Deadline'])) ?> WIB</td>
+                                                    <td>
+                                                        <?php if($is_done): ?>
+                                                            <span class="badge-status status-sudah">Selesai (Score: <?= $row['Nilai'] ?? '-' ?>)</span>
+                                                        <?php else: ?>
+                                                            <span class="badge-status status-belum">Belum Selesai</span>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                    <td class="text-end px-4">
+                                                        <a href="tugas.php?id_tugas=<?= $row['IDTugas'] ?>" class="btn btn-sm btn-danger text-white rounded-pill px-3" style="background: linear-gradient(135deg, #dc3545, #9b1c26); border: none; font-size: 0.75rem;">
+                                                            Detail
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                            <?php endwhile; ?>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 <?php endif; ?>
 
-            </div>
+            </main>
         </div>
     </div>
 
