@@ -16,9 +16,11 @@ if(isset($_POST['simpan_deskripsi'])){
 }
 if(isset($_POST['tambah_topik'])){
     $nama_topik = mysqli_real_escape_string($koneksi, $_POST['nama_topik']);
-    $q_urut = mysqli_query($koneksi, "SELECT MAX(Urutan) as max_urut FROM topik_mapel WHERE IDMapel = '$id_mapel'");
+    $q_urut = mysqli_query($koneksi, "SELECT MAX(Urutan) as max_urut FROM topik_mapel WHERE IDMapel = '$id_mapel' AND Kelas = '$kelas'");
     $urut = (mysqli_fetch_assoc($q_urut)['max_urut'] ?? 0) + 1;
-    mysqli_query($koneksi, "INSERT INTO topik_mapel (IDMapel, NamaTopik, Urutan) VALUES ('$id_mapel', '$nama_topik', $urut)");
+    
+    // Insert dengan memasukkan variabel $kelas
+    mysqli_query($koneksi, "INSERT INTO topik_mapel (IDMapel, Kelas, NamaTopik, Urutan) VALUES ('$id_mapel', '$kelas', '$nama_topik', $urut)");
     header("Location: kelolaMapel.php?id_mapel=$id_mapel&kelas=".urlencode($kelas)."&pesan=topik_tambah"); exit;
 }
 if(isset($_POST['edit_topik'])){
@@ -28,10 +30,10 @@ if(isset($_POST['edit_topik'])){
     header("Location: kelolaMapel.php?id_mapel=$id_mapel&kelas=".urlencode($kelas)."&pesan=topik_edit"); exit;
 }
 
-$q_cek_topik = mysqli_query($koneksi, "SELECT * FROM topik_mapel WHERE IDMapel = '$id_mapel'");
+$q_cek_topik = mysqli_query($koneksi, "SELECT * FROM topik_mapel WHERE IDMapel = '$id_mapel' AND Kelas = '$kelas'");
 if(mysqli_num_rows($q_cek_topik) == 0){
-    mysqli_query($koneksi, "INSERT INTO topik_mapel (IDMapel, NamaTopik, Urutan) VALUES ('$id_mapel', 'Umum / Pengumuman', 1)");
-    mysqli_query($koneksi, "INSERT INTO topik_mapel (IDMapel, NamaTopik, Urutan) VALUES ('$id_mapel', 'Bab 1: Pendahuluan', 2)");
+    mysqli_query($koneksi, "INSERT INTO topik_mapel (IDMapel, Kelas, NamaTopik, Urutan) VALUES ('$id_mapel', '$kelas', 'Umum / Pengumuman', 1)");
+    mysqli_query($koneksi, "INSERT INTO topik_mapel (IDMapel, Kelas, NamaTopik, Urutan) VALUES ('$id_mapel', '$kelas', 'Bab 1: Pendahuluan', 2)");
     header("Refresh:0"); exit;
 }
 
@@ -123,7 +125,8 @@ $deskripsi_mapel = !empty($mapel['Deskripsi']) ? $mapel['Deskripsi'] : 'Belum ad
             </div>
 
             <?php 
-            $q_topik_all = mysqli_query($koneksi, "SELECT * FROM topik_mapel WHERE IDMapel = '$id_mapel' ORDER BY Urutan ASC");
+            // Tambahkan AND Kelas = '$kelas' agar tidak bercampur dengan kelas lain
+            $q_topik_all = mysqli_query($koneksi, "SELECT * FROM topik_mapel WHERE IDMapel = '$id_mapel' AND Kelas = '$kelas' ORDER BY Urutan ASC");
             while($topik = mysqli_fetch_assoc($q_topik_all)): 
                 $id_topik = $topik['IDTopik'];
                 $nama_topik = $topik['NamaTopik'];
