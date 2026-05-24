@@ -264,7 +264,7 @@ $query_siswa_baru = mysqli_query($koneksi, "SELECT SISWA.*, users.Status FROM SI
                                     <a href="tambahGuru.php" class="btn btn-success text-start py-3 shadow-sm text-decoration-none">
                                         <i class="bi bi-person-badge-fill me-3 fs-5"></i> Tambah Guru Baru
                                     </a>    
-                                    <a href="mataPelajaran.php" class="btn btn-warning text-dark text-start py-3 shadow-sm text-decoration-none">
+                                    <a href="tambahMapel.php" class="btn btn-warning text-dark text-start py-3 shadow-sm text-decoration-none">
                                          <i class="bi bi-journal-plus me-3 fs-5"></i> Buat Mata Pelajaran
                                     </a>
                                 </div>
