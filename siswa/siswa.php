@@ -144,7 +144,7 @@ $query_mapel = mysqli_query($koneksi, "SELECT m.*, g.NamaGuru FROM mapel m LEFT 
             
             <div class="d-flex align-items-center gap-3">
                 <div class="text-end text-white d-none d-md-block">
-                    <h6 class="mb-0 fw-bold small text-nowrap"><?= htmlspecialchars($data_siswa['Nama'] ?? 'Siswa') ?></h6>
+                    <h6 class="mb-0 fw-bold small text-nowrap" style="font-size: 1.25rem"><?= htmlspecialchars($data_siswa['Nama'] ?? 'Siswa') ?></h6>
                     <small class="text-white-50 text-uppercase d-block" style="font-size: 0.65rem; letter-spacing: 0.5px;"><?= htmlspecialchars($data_siswa['Kelas'] ?? '') ?></small>
                 </div>
                 <div class="rounded-circle bg-white p-0.5 shadow-sm border border-2 border-white border-opacity-20">
