@@ -279,11 +279,22 @@ function hitungWaktuTersisa($deadline_str, $tgl_kumpul_str = null) {
                     </button>
                 </div>
 
-                <div class="text-dark" style="line-height: 1.7;">
-                    <p><?= nl2br(htmlspecialchars($tugas['Deskripsi'] ?? 'Silakan kerjakan tugas sesuai instruksi guru.')) ?></p>
-                </div>
-
                 <div class="tugas-detail-box">
+                    
+                    <div class="bg-light p-4 rounded-3 border mb-4">
+                        <h6 class="fw-bold text-dark mb-3"><i class="bi bi-info-square me-2 text-primary"></i>Instruksi Pengerjaan / Soal:</h6>
+                        <div class="text-dark mb-3" style="line-height: 1.7;">
+                            <?= nl2br(htmlspecialchars($tugas['Deskripsi'] ?? 'Silakan kerjakan tugas sesuai instruksi guru.')) ?>
+                        </div>
+                        
+                        <?php if($is_submitted): ?>
+                        <div class="pt-3 border-top d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-primary fw-bold px-3" onclick="alert('Fitur edit pengajuan dalam pengembangan!')"><i class="bi bi-pencil-square me-1"></i> Edit Pengajuan</button>
+                            <button class="btn btn-sm btn-outline-danger fw-bold px-3" onclick="alert('Fitur hapus pengajuan dalam pengembangan!')"><i class="bi bi-trash me-1"></i> Hapus Pengajuan</button>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+
                     <h5 class="fw-bold text-dark mb-3">Status pengajuan tugas</h5>
                     <table class="tugas-table">
                         <tr>
@@ -314,9 +325,13 @@ function hitungWaktuTersisa($deadline_str, $tgl_kumpul_str = null) {
                         <tr>
                             <th>Pengajuan berkas</th>
                             <td>
-                                <?php if($is_submitted): ?>
-                                    <a href="../uploads/tugas/<?= htmlspecialchars($kumpul['FileJawaban'] ?? $kumpul['FileKumpul'] ?? '') ?>" target="_blank" class="text-decoration-none">
-                                        <i class="bi bi-file-earmark-arrow-down-fill text-primary me-1"></i> File Tugas Anda
+                                <?php if($is_submitted): 
+                                    $file_db = $kumpul['FileJawaban'] ?? $kumpul['FileKumpul'] ?? '';
+                                    // Mengambil nama file asli beserta ekstensinya secara bersih
+                                    $nama_file_clean = basename($file_db);
+                                ?>
+                                    <a href="../uploads/tugas/<?= htmlspecialchars($file_db) ?>" target="_blank" class="text-decoration-none fw-bold text-primary">
+                                        <i class="bi bi-file-earmark-arrow-down-fill me-1"></i> <?= htmlspecialchars($nama_file_clean) ?>
                                     </a>
                                 <?php else: ?>
                                     -
@@ -331,21 +346,22 @@ function hitungWaktuTersisa($deadline_str, $tgl_kumpul_str = null) {
                         <?php endif; ?>
                     </table>
 
-                    <div class="text-center mt-4">
-                        <?php if($is_submitted): ?>
-                            <button class="btn btn-secondary px-4 fw-bold me-2" onclick="alert('Fitur edit pengajuan dalam pengembangan!')">Edit pengajuan</button>
-                            <button class="btn btn-outline-danger px-4 fw-bold" onclick="alert('Fitur hapus pengajuan dalam pengembangan!')">Hapus pengajuan</button>
-                        <?php else: ?>
-                            <form action="proses_kumpul_tugas.php" method="POST" enctype="multipart/form-data" class="d-inline-block w-50 text-start bg-light p-3 rounded border">
-                                <input type="hidden" name="id_tugas" value="<?= $id_tugas ?>">
-                                <div class="mb-3">
-                                    <label class="form-label small fw-bold">Unggah Berkas Jawaban (Sesuai ketentuan guru):</label>
-                                    <input type="file" class="form-control bg-white" name="file_tugas" required>
-                                </div>
-                                <button type="submit" class="btn btn-primary w-100 fw-bold">Tambahkan Pengajuan</button>
-                            </form>
-                        <?php endif; ?>
+                    <?php if(!$is_submitted): ?>
+                    <div class="mt-5 pt-3">
+                        <h5 class="fw-bold text-dark mb-3">Formulir Pengumpulan Tugas</h5>
+                        <form action="proses_kumpul_tugas.php" method="POST" enctype="multipart/form-data" class="bg-light p-4 rounded-3 border">
+                            <input type="hidden" name="id_tugas" value="<?= $id_tugas ?>">
+                            <div class="mb-4">
+                                <label class="form-label fw-bold text-secondary">Pilih File / Berkas Jawaban Anda <span class="text-danger">*</span></label>
+                                <input type="file" class="form-control form-control-lg bg-white shadow-sm border-secondary-subtle" name="file_tugas" required>
+                                <div class="form-text mt-2"><i class="bi bi-info-circle me-1"></i> Pastikan format file sesuai dengan yang diizinkan oleh guru.</div>
+                            </div>
+                            <button type="submit" class="btn btn-primary px-5 py-2 fw-bold shadow-sm">
+                                <i class="bi bi-cloud-arrow-up-fill me-2"></i> Tambahkan Pengajuan
+                            </button>
+                        </form>
                     </div>
+                    <?php endif; ?>
                 </div>
 
                 <div class="mt-4 pt-3 border-top d-flex justify-content-between">
@@ -418,19 +434,26 @@ function hitungWaktuTersisa($deadline_str, $tgl_kumpul_str = null) {
         }
 
         // --- FITUR TANDAI SELESAI (MATERI) LOCAL STORAGE ---
-        function toggleSelesai(btn, idItem) {
-            let isDone = btn.classList.contains('done');
-            if(!isDone) {
-                btn.classList.add('done');
-                btn.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Selesai';
-                localStorage.setItem(idItem, 'selesai');
-                Swal.fire({ title: 'Mantap!', text: 'Materi telah dibaca.', icon: 'success', toast: true, position: 'bottom-end', showConfirmButton: false, timer: 2000 });
-            } else {
-                btn.classList.remove('done');
-                btn.innerHTML = '<i class="bi bi-circle me-1"></i> Tandai Selesai';
-                localStorage.removeItem(idItem);
-            }
-        }
+        // Diam-diam panggil backend untuk menambahkan Poin Gamifikasi ke Database (AJAX)
+        fetch('proses_poin_materi.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'id_materi=' + encodeURIComponent(idItem)
+                })
+                .then(response => response.text())
+                .then(points => {
+                    // Tampilkan poin secara real-time berdasarkan balikan database aturan
+                    Swal.fire({ 
+                        title: 'Materi Selesai! 📚', 
+                        text: 'Selamat! +' + points + ' XP Berhasil Ditambahkan ke Riwayat Poin Anda.', 
+                        icon: 'success', 
+                        toast: true, 
+                        position: 'bottom-end', 
+                        showConfirmButton: false, 
+                        timer: 3500,
+                        timerProgressBar: true
+                    });
+                });
 
         // Load state memori browser
         document.addEventListener('DOMContentLoaded', () => {
@@ -446,5 +469,22 @@ function hitungWaktuTersisa($deadline_str, $tgl_kumpul_str = null) {
             });
         });
     </script>
+
+<?php if(isset($_GET['status']) && $_GET['status'] == 'sukses_kumpul'): 
+        $q_at = mysqli_query($koneksi, "SELECT Poin FROM master_aturan_poin WHERE IDAturan = 'A001'");
+        $p_tgs = mysqli_fetch_assoc($q_at)['Poin'] ?? 50;
+    ?>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            Swal.fire({
+                title: 'Tugas Berhasil Dikirim! 🚀',
+                text: 'Kerja bagus! Riwayat poin Anda telah diperbarui. Selamat mendapatkan +<?= $p_tgs ?> XP!',
+                icon: 'success',
+                confirmButtonColor: '#4f46e5',
+                backdrop: `rgba(79, 70, 229, 0.1)`
+            });
+        });
+    </script>
+    <?php endif; ?>
 </body>
 </html>
