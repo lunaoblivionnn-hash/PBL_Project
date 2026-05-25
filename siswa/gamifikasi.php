@@ -237,28 +237,28 @@ $id_siswa = isset($data_siswa['IDSiswa']) ? $data_siswa['IDSiswa'] : '';
                                 <div class="list-group list-group-flush">
                                     <div class="list-group-item d-flex justify-content-between align-items-center py-3">
                                         <div class="d-flex align-items-center gap-3">
-                                            <span class="fw-bold text-warning fs-5">1</span>
+                                            <span class="fw-bold text-mjuted fs-5">1</span>
                                             <div class="fw-bold text-dark">Ahmad Fauzi</div>
                                         </div>
                                         <span class="fw-bold text-muted">520 XP</span>
                                     </div>
                                     <div class="list-group-item d-flex justify-content-between align-items-center py-3">
                                         <div class="d-flex align-items-center gap-3">
-                                            <span class="fw-bold text-secondary fs-5">2</span>
+                                            <span class="fw-bold text-muted fs-5">2</span>
                                             <div class="fw-bold text-dark">Siti Aminah</div>
                                         </div>
                                         <span class="fw-bold text-muted">480 XP</span>
                                     </div>
                                     <div class="list-group-item d-flex justify-content-between align-items-center py-3">
                                         <div class="d-flex align-items-center gap-3">
-                                            <span class="fw-bold text-danger fs-5">3</span>
+                                            <span class="fw-bold text-muted fs-5">3</span>
                                             <div class="fw-bold text-dark">Budi Santoso</div>
                                         </div>
                                         <span class="fw-bold text-muted">410 XP</span>
                                     </div>
                                     <div class="list-group-item d-flex justify-content-between align-items-center py-3 bg-light rounded">
                                         <div class="d-flex align-items-center gap-3">
-                                            <span class="fw-bold text-muted fs-5">4</span>
+                                            <span class="fw-bold text-danger fs-5">4</span>
                                             <div class="fw-bold text-danger">Risma Setiyo M (Kamu)</div>
                                         </div>
                                         <span class="fw-bold text-danger">350 XP</span>
