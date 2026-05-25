@@ -125,16 +125,13 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
                                     foreach($kelas_list as $kelas): 
                                         $id_safe = preg_replace('/[^a-zA-Z0-9]/', '', $kelas); 
                                         
-                                        // 2. LOGIKA AUTO-CHECK JIKA GURU INI SUDAH MENGAMPU KELAS INI
+                                        // LOGIKA AUTO-CHECK JIKA GURU INI SUDAH MENGAMPU KELAS INI
                                         $is_kelas_checked = isset($mapel_guru_terpilih[$kelas]) ? 'checked' : '';
                                         $box_display = isset($mapel_guru_terpilih[$kelas]) ? '' : 'd-none';
-
-                                        // 3. CARI MAPEL YANG MENGANDUNG KELAS INI (Gunakan LIKE karena formatnya JSON)
+                                    
+                                        // AMBIL MAPEL (TETAP AMBIL)
                                         $q_mapel_db = mysqli_query($koneksi, "SELECT DISTINCT NamaMapel FROM mapel WHERE Kelas LIKE '%\"$kelas\"%' ORDER BY NamaMapel ASC");
-
-                                        // 4. HANYA TAMPILKAN KOTAK KELAS JIKA ADA MAPEL DI DALAMNYA
-                                        if(mysqli_num_rows($q_mapel_db) > 0):
-                                            $ada_mapel_aktif = true;
+                                        $ada_mapel = mysqli_num_rows($q_mapel_db) > 0;
                                     ?>
                                     <div class="col-md-6">
                                         <div class="card border border-secondary-subtle shadow-sm h-100">
@@ -169,7 +166,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
                                         </div>
                                     </div>
                                     <?php 
-                                        endif;
+                                      
                                     endforeach; 
 
                                     // Jika tidak ada satu pun mapel di database yang terhubung ke kelas
