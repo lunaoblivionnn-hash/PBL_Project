@@ -133,7 +133,7 @@
                                                             <div class="card-body p-3">
                                                                 <div class="form-check form-switch border-bottom pb-2 mb-2">
                                                                     <input class="form-check-input switch-kelas" type="checkbox" name="kelas_diampu[]" value="<?= $kelas ?>" id="switch_<?= $id_safe ?>" onchange="toggleMapel('<?= $id_safe ?>')">
-                                                                    <label class="form-check-label fw-bold text-danger ms-1" style="cursor:pointer;" for="switch_<?= $id_safe ?>"><?= $kelas ?></label>
+                                                                    <label class="form-check-label fw-bold text-danger ms-1" style="cursor:pointer;" for="switch_<?= $id_safe ?>"><?= $kelas ?></label> 
                                                                 </div>
 
                                                                 <div class="mapel-box d-none" id="box_<?= $id_safe ?>">
