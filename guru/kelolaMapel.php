@@ -8,7 +8,7 @@ if(!isset($_GET['id_mapel']) || !isset($_GET['kelas'])){ echo "<script>alert('Ak
 $id_mapel = mysqli_real_escape_string($koneksi, $_GET['id_mapel']);
 $kelas    = mysqli_real_escape_string($koneksi, $_GET['kelas']);
 
-// LOGIKA UPDATE, TAMBAH TOPIK, DLL TETAP SAMA
+// LOGIKA UPDATE, TAMBAH TOPIK, DLL
 if(isset($_POST['simpan_deskripsi'])){
     $deskripsi_baru = mysqli_real_escape_string($koneksi, $_POST['deskripsi_baru']);
     mysqli_query($koneksi, "UPDATE mapel SET Deskripsi = '$deskripsi_baru' WHERE IDMapel = '$id_mapel'");
@@ -19,7 +19,6 @@ if(isset($_POST['tambah_topik'])){
     $q_urut = mysqli_query($koneksi, "SELECT MAX(Urutan) as max_urut FROM topik_mapel WHERE IDMapel = '$id_mapel' AND Kelas = '$kelas'");
     $urut = (mysqli_fetch_assoc($q_urut)['max_urut'] ?? 0) + 1;
     
-    // Insert dengan memasukkan variabel $kelas
     mysqli_query($koneksi, "INSERT INTO topik_mapel (IDMapel, Kelas, NamaTopik, Urutan) VALUES ('$id_mapel', '$kelas', '$nama_topik', $urut)");
     header("Location: kelolaMapel.php?id_mapel=$id_mapel&kelas=".urlencode($kelas)."&pesan=topik_tambah"); exit;
 }
@@ -41,6 +40,13 @@ $query_mapel = mysqli_query($koneksi, "SELECT * FROM mapel WHERE IDMapel = '$id_
 $mapel = mysqli_fetch_assoc($query_mapel);
 $nama_mapel = $mapel['NamaMapel'] ?? 'Mapel Tidak Ditemukan';
 $deskripsi_mapel = !empty($mapel['Deskripsi']) ? $mapel['Deskripsi'] : 'Belum ada panduan untuk mata pelajaran ini.';
+
+// =================================================================================
+// 1. SIAPKAN DATA DAFTAR BAB UNTUK DITAMPILKAN DI SIDEBAR KIRI & KONTEN UTAMA
+// =================================================================================
+$q_topik_all = mysqli_query($koneksi, "SELECT * FROM topik_mapel WHERE IDMapel = '$id_mapel' AND Kelas = '$kelas' ORDER BY Urutan ASC");
+$daftar_topik = [];
+while($t = mysqli_fetch_assoc($q_topik_all)) { $daftar_topik[] = $t; }
 ?>
 
 <!DOCTYPE html>
@@ -53,21 +59,38 @@ $deskripsi_mapel = !empty($mapel['Deskripsi']) ? $mapel['Deskripsi'] : 'Belum ad
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <style>
         :root { --primary: #4f46e5; --primary-light: #eef2ff; --sidebar-width: 280px; }
-        body { background-color: #f3f4f6; overflow-x: hidden; font-family: 'Segoe UI', system-ui, sans-serif; }
+        body { background-color: #f8fafc; overflow-x: hidden; font-family: 'Segoe UI', system-ui, sans-serif; }
         .navbar-custom { background: #fff; border-bottom: 1px solid #e5e7eb; z-index: 1030; }
         .btn-toggle { font-size: 1.5rem; color: #4b5563; background: transparent; border: none; padding: 0 15px; }
+        
+        /* LAYOUT BERSAMA (WRAPPER & SIDEBAR BARU) */
         #wrapper { display: flex; width: 100%; align-items: stretch; min-height: calc(100vh - 60px); }
-        #sidebar { min-width: var(--sidebar-width); max-width: var(--sidebar-width); background: #fff; border-right: 1px solid #e5e7eb; transition: all 0.3s; z-index: 1000; }
-        #sidebar.collapsed { margin-left: calc(-1 * var(--sidebar-width)); }
-        .sidebar-menu { padding: 15px 10px; list-style: none; margin: 0; }
-        .sidebar-menu li a { display: flex; align-items: center; padding: 10px 15px; color: #4b5563; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 0.9rem; transition: 0.2s; margin-bottom: 5px; }
-        .sidebar-menu li a:hover, .sidebar-menu li a.active { background: var(--primary-light); color: var(--primary); }
-        #main-content { width: 100%; padding: 30px; transition: all 0.3s; }
+        #sidebar-course { min-width: 280px; max-width: 280px; background: #fff; border-right: 1px solid #e2e8f0; position: sticky; top: 60px; height: calc(100vh - 60px); overflow-y: auto; padding: 20px 15px; z-index: 100; transition: all 0.3s;}
+        #sidebar-course.collapsed { margin-left: -280px; }
+        .course-index-title { font-size: 0.8rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; padding-left: 10px; }
+        .index-item { display: block; padding: 10px 15px; color: #475569; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 0.9rem; transition: 0.2s; margin-bottom: 5px; cursor: pointer; }
+        .index-item:hover { background: #e0e7ff; color: #4f46e5; }
+        .index-item.active { background: #4f46e5; color: #fff; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.2); }
+        
+        #main-content { width: 100%; padding: 30px 40px; transition: all 0.3s; }
         .desc-box { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; position: relative; }
-        .section-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; margin-bottom: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
-        .section-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: #fff; border-bottom: 1px solid #e5e7eb; border-radius: 12px 12px 0 0; }
-        .section-title { font-weight: 700; color: var(--primary); margin: 0; font-size: 1.1rem; }
-        .section-body { padding: 20px; background: #f8fafc; border-radius: 0 0 12px 12px; }
+        
+        /* SECTION CARD BARU (Gaya Akordion) */
+        .section-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.02); overflow: hidden; }
+        .section-header { padding: 15px 20px; display: flex; align-items: center; justify-content: space-between; background: #fff; transition: 0.2s; }
+        .section-header:hover { background: #f8fafc; }
+        
+        .section-title-wrapper { display: flex; align-items: center; flex-grow: 1; cursor: pointer; }
+        .toggle-icon { font-size: 1.2rem; color: #94a3b8; transition: transform 0.3s ease; margin-right: 15px; }
+        .section-title-wrapper[aria-expanded="true"] .toggle-icon { transform: rotate(90deg); color: #4f46e5; }
+        .section-title-wrapper[aria-expanded="true"] { border-bottom: 1px solid transparent; }
+        .section-title { font-weight: 700; color: #1e293b; font-size: 1.15rem; margin: 0; }
+        
+        .section-body { padding: 15px 25px 25px 25px; border-top: 1px solid #e2e8f0; }
+        
+        /* Tombol Aksi Kanan (Titik Tiga) */
+        .btn-action-section { color: #64748b; background: transparent; border: none; padding: 8px 12px; border-radius: 8px; transition: 0.2s; }
+        .btn-action-section:hover { background: #e2e8f0; color: #1e293b; }
         
         /* DESAIN KONTEN YANG BISA DIKLIK (INTERAKTIF) */
         .resource-item { display: flex; align-items: center; padding: 14px 18px; border: 1px solid #e5e7eb; border-radius: 10px; background: #fff; margin-bottom: 8px; transition: 0.2s; cursor: pointer; position: relative; z-index: 2; }
@@ -81,6 +104,16 @@ $deskripsi_mapel = !empty($mapel['Deskripsi']) ? $mapel['Deskripsi'] : 'Belum ad
         
         .upload-zone { border: 2.5px dashed #c7d2fe; border-radius: 14px; padding: 30px 20px; text-align: center; cursor: pointer; transition: .3s; background: #f8fafc; }
         .upload-zone:hover { border-color: var(--primary); background: #eff6ff; }
+
+        @media (max-width: 768px) { #sidebar-course { display: none; } #main-content { padding: 20px; } }
+
+        /* CSS TAMBAHAN UNTUK SIDEBAR ACCORDION */
+        .sidebar-accordion .accordion-button { padding: 10px 15px; color: #475569; border-radius: 8px; font-weight: 600; font-size: 0.9rem; margin-bottom: 2px; }
+        .sidebar-accordion .accordion-button:not(.collapsed) { background: #e0e7ff; color: #4f46e5; box-shadow: none; }
+        .sidebar-accordion .accordion-button:focus { box-shadow: none; }
+        .sidebar-accordion .accordion-button::after { transform: scale(0.8); }
+        .sidebar-subitem { display: block; padding: 6px 15px 6px 35px; font-size: 0.85rem; color: #64748b; text-decoration: none; transition: 0.2s; border-radius: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+        .sidebar-subitem:hover { color: #4f46e5; background: #f8fafc; }
     </style>
 </head>
 <body>
@@ -96,21 +129,54 @@ $deskripsi_mapel = !empty($mapel['Deskripsi']) ? $mapel['Deskripsi'] : 'Belum ad
     </nav>
 
     <div id="wrapper">
-        <nav id="sidebar">
-            <div class="p-4 border-bottom">
-                <h6 class="fw-bold mb-1" style="color: var(--primary);"><?= htmlspecialchars($nama_mapel) ?></h6>
-                <span class="badge bg-dark bg-opacity-10 text-dark border"><i class="bi bi-building me-1"></i> Kelas <?= htmlspecialchars($kelas) ?></span>
+    <nav id="sidebar-course">
+            <div class="p-2 mb-2 border-bottom text-center">
+                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary w-100 py-2"><i class="bi bi-building me-1"></i> Kelas <?= htmlspecialchars($kelas) ?></span>
             </div>
-            <ul class="sidebar-menu">
-                <li><a href="#" class="active"><i class="bi bi-journal-text me-2"></i> Ruang Kelas Utama</a></li>
-                <li><a href="#"><i class="bi bi-people me-2"></i> Daftar Anggota Siswa</a></li>
-                <li><a href="#"><i class="bi bi-clipboard-data me-2"></i> Rekap Penilaian</a></li>
-            </ul>
+            <div class="course-index-title mt-3">DAFTAR ISI KELAS</div>
+            <a href="#header-mapel" class="index-item active mb-3" onclick="setActiveSidebar(this)">
+                <i class="bi bi-info-square me-2"></i> Pengaturan Umum
+            </a>
+            
+            <div class="accordion accordion-flush sidebar-accordion" id="accordionSidebar">
+            <?php foreach($daftar_topik as $tp): 
+                $id_tp = $tp['IDTopik'];
+            ?>
+                <div class="accordion-item bg-transparent border-0">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed bg-transparent" type="button" data-bs-toggle="collapse" data-bs-target="#sideCollapse<?= $id_tp ?>" aria-expanded="false" onclick="bukaSectionUtama('<?= $id_tp ?>')">
+                            <span class="text-truncate" style="max-width: 190px;"><?= htmlspecialchars($tp['NamaTopik']) ?></span>
+                        </button>
+                    </h2>
+                    <div id="sideCollapse<?= $id_tp ?>" class="accordion-collapse collapse" data-bs-parent="#accordionSidebar">
+                        <div class="accordion-body p-0 pb-2">
+                            <?php 
+                            // Tarik daftar materi untuk sidebar
+                            $q_sm = mysqli_query($koneksi, "SELECT IDMateri, Judul FROM materi WHERE IDMapel='$id_mapel' AND IDTopik='$id_tp'");
+                            while($sm = mysqli_fetch_assoc($q_sm)): ?>
+                                <a href="#detailMateri<?= $sm['IDMateri'] ?>" class="sidebar-subitem" onclick="bukaSectionUtama('<?= $id_tp ?>', '#detailMateri<?= $sm['IDMateri'] ?>')"><i class="bi bi-file-earmark-text text-primary me-2"></i><?= htmlspecialchars($sm['Judul']) ?></a>
+                            <?php endwhile; ?>
+                            
+                            <?php 
+                            // Tarik daftar tugas untuk sidebar
+                            $q_st = mysqli_query($koneksi, "SELECT IDTugas, Judul FROM tugas WHERE IDMapel='$id_mapel' AND IDTopik='$id_tp'");
+                            while($st = mysqli_fetch_assoc($q_st)): ?>
+                                <a href="#detailTugas<?= $st['IDTugas'] ?>" class="sidebar-subitem" onclick="bukaSectionUtama('<?= $id_tp ?>', '#detailTugas<?= $st['IDTugas'] ?>')"><i class="bi bi-journal-check text-success me-2"></i><?= htmlspecialchars($st['Judul']) ?></a>
+                            <?php endwhile; ?>
+                            
+                            <?php if(mysqli_num_rows($q_sm) == 0 && mysqli_num_rows($q_st) == 0): ?>
+                                <div class="sidebar-subitem fst-italic text-muted" style="pointer-events: none;">Belum ada konten</div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+            </div>
         </nav>
 
         <main id="main-content">
             
-            <div class="desc-box shadow-sm mb-4">
+            <div id="header-mapel" class="desc-box shadow-sm mb-4">
                 <button class="btn btn-sm btn-light border position-absolute top-0 end-0 m-3 fw-bold text-secondary" data-bs-toggle="modal" data-bs-target="#modalEditDeskripsi">
                     <i class="bi bi-pencil-square me-1"></i> Edit Pengantar
                 </button>
@@ -125,34 +191,51 @@ $deskripsi_mapel = !empty($mapel['Deskripsi']) ? $mapel['Deskripsi'] : 'Belum ad
             </div>
 
             <?php 
-            // Tambahkan AND Kelas = '$kelas' agar tidak bercampur dengan kelas lain
-            $q_topik_all = mysqli_query($koneksi, "SELECT * FROM topik_mapel WHERE IDMapel = '$id_mapel' AND Kelas = '$kelas' ORDER BY Urutan ASC");
-            while($topik = mysqli_fetch_assoc($q_topik_all)): 
+            // =================================================================================
+            // 2. RENDER CARD SECTION GAYA BARU DARI ARRAY DAFTAR TOPIK
+            // =================================================================================
+            foreach($daftar_topik as $index => $topik): 
                 $id_topik = $topik['IDTopik'];
                 $nama_topik = $topik['NamaTopik'];
+                $is_first = ($index == 0);
             ?>
             
-            <div class="section-card shadow-sm">
+            <div class="section-card course-chapter" id="section-<?= $id_topik ?>">
+                
                 <div class="section-header">
-                    <h3 class="section-title"><i class="bi bi-bookmark-fill me-2" style="color: #cbd5e1;"></i><?= htmlspecialchars($nama_topik) ?></h3>
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-sm btn-light text-secondary border" title="Edit Nama Bagian" onclick="bukaModalEditTopik('<?= $id_topik ?>', '<?= addslashes(htmlspecialchars($nama_topik)) ?>')">
-                            <i class="bi bi-pencil-fill"></i>
+                    <div class="section-title-wrapper" data-bs-toggle="collapse" data-bs-target="#collapseTopik<?= $id_topik ?>" aria-expanded="<?= $is_first ? 'true' : 'false' ?>">
+                        <i class="bi bi-chevron-right toggle-icon"></i>
+                        <h3 class="section-title"><?= htmlspecialchars($nama_topik) ?></h3>
+                    </div>
+                    
+                    <div class="dropdown">
+                        <button class="btn-action-section" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-three-dots-vertical fs-5"></i>
                         </button>
-                        <button class="btn btn-sm btn-light text-secondary border" data-bs-toggle="collapse" data-bs-target="#collapseTopik<?= $id_topik ?>">
-                            <i class="bi bi-chevron-down"></i>
-                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3">
+                            <li>
+                                <a class="dropdown-item fw-semibold text-primary py-2" href="#" data-bs-toggle="modal" data-bs-target="#modalEditTopik" onclick="document.getElementById('inputIdTopikEdit').value='<?= $id_topik ?>'; document.getElementById('inputNamaTopikEdit').value='<?= addslashes(htmlspecialchars($nama_topik)) ?>';">
+                                    <i class="bi bi-pencil-square me-2"></i> Edit Judul Bab
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item fw-semibold text-danger py-2" href="hapusTopik.php?id=<?= $id_topik ?>&id_mapel=<?= $id_mapel ?>&kelas=<?= urlencode($kelas) ?>" onclick="return confirm('Yakin ingin menghapus bab ini beserta seluruh materi dan tugas di dalamnya?')">
+                                    <i class="bi bi-trash-fill me-2"></i> Hapus Bab
+                                </a>
+                            </li>
+                        </ul>
                     </div>
                 </div>
 
-                <div id="collapseTopik<?= $id_topik ?>" class="collapse">
+                <div id="collapseTopik<?= $id_topik ?>" class="collapse <?= $is_first ? 'show' : '' ?>">
                     <div class="section-body">
                         
                         <?php
                         $ada_konten = false;
                         
                         // ==========================================
-                        // RENDER KONTEN MATERI (BISA DI-EXPAND)
+                        // RENDER KONTEN MATERI 
                         // ==========================================
                         $q_materi = mysqli_query($koneksi, "SELECT * FROM materi WHERE IDMapel='$id_mapel' AND IDTopik='$id_topik'");
                         while($mt = mysqli_fetch_assoc($q_materi)): $ada_konten = true;
@@ -161,7 +244,17 @@ $deskripsi_mapel = !empty($mapel['Deskripsi']) ? $mapel['Deskripsi'] : 'Belum ad
                                 <div class="icon-box bg-primary bg-opacity-10 text-primary"><i class="bi bi-file-earmark-text-fill"></i></div>
                                 <div class="flex-grow-1">
                                     <div class="fw-bold text-dark mb-1"><?= htmlspecialchars($mt['Judul']) ?></div>
-                                    <div class="small text-muted"><i class="bi bi-paperclip me-1"></i> <?= htmlspecialchars($mt['Filepath']) ?></div>
+                                    <?php 
+                                    // Membersihkan nama file materi dari angka random
+                                    $file_asli_materi = explode('_', $mt['Filepath']);
+                                    array_shift($file_asli_materi); // Buang bagian pertama (MATERI)
+                                    array_shift($file_asli_materi); // Buang bagian kedua (Timestamp)
+                                    array_shift($file_asli_materi); // Buang bagian ketiga (Angka Random)
+                                    $nama_bersih_materi = !empty($file_asli_materi) ? implode('_', $file_asli_materi) : basename($mt['Filepath']);
+                                    // Jika nama masih kosong karena format beda, pakai nama mentah
+                                    if($nama_bersih_materi == "") $nama_bersih_materi = $mt['Filepath'];
+                                    ?>
+                                    <div class="small text-muted"><i class="bi bi-paperclip me-1"></i> <?= htmlspecialchars($nama_bersih_materi) ?></div>
                                 </div>
                                 <i class="bi bi-chevron-down text-muted"></i>
                             </div>
@@ -189,7 +282,7 @@ $deskripsi_mapel = !empty($mapel['Deskripsi']) ? $mapel['Deskripsi'] : 'Belum ad
 
                         <?php
                         // ==========================================
-                        // RENDER KONTEN TUGAS (BISA DI-EXPAND)
+                        // RENDER KONTEN TUGAS 
                         // ==========================================
                         $q_tugas = mysqli_query($koneksi, "SELECT * FROM tugas WHERE IDMapel='$id_mapel' AND IDTopik='$id_topik'");
                         while($tg = mysqli_fetch_assoc($q_tugas)): $ada_konten = true;
@@ -266,7 +359,7 @@ $deskripsi_mapel = !empty($mapel['Deskripsi']) ? $mapel['Deskripsi'] : 'Belum ad
                     </div>
                 </div>
             </div>
-            <?php endwhile; ?>
+            <?php endforeach; ?>
 
             <div class="text-center mt-4 pt-2 mb-5">
                 <button class="btn btn-outline-primary border-2 fw-bold rounded-pill px-4 shadow-sm py-2" data-bs-toggle="modal" data-bs-target="#modalTambahTopik">
@@ -516,35 +609,138 @@ $deskripsi_mapel = !empty($mapel['Deskripsi']) ? $mapel['Deskripsi'] : 'Belum ad
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
-        document.getElementById('sidebarToggle').addEventListener('click', function() { if (window.innerWidth <= 768) document.getElementById('sidebar').classList.toggle('show-mobile'); else document.getElementById('sidebar').classList.toggle('collapsed'); });
+        document.getElementById('sidebarToggle').addEventListener('click', function() { document.getElementById('sidebar-course').classList.toggle('collapsed'); });
+        
         function bukaModalAktivitas(idTopik, namaTopik) { document.getElementById('labelTargetTopik').innerText = namaTopik; document.getElementById('inputTopikMateri').value = idTopik; document.getElementById('inputTopikTugas').value = idTopik; new bootstrap.Modal(document.getElementById('modalPilihAktivitas')).show(); }
         function pindahModal(idModalTujuan) { bootstrap.Modal.getInstance(document.getElementById('modalPilihAktivitas')).hide(); new bootstrap.Modal(document.getElementById(idModalTujuan)).show(); }
-        function bukaModalEditTopik(idTopik, namaLama) { document.getElementById('inputIdTopikEdit').value = idTopik; document.getElementById('inputNamaTopikEdit').value = namaLama; new bootstrap.Modal(document.getElementById('modalEditTopik')).show(); }
         
         function showFileMateri(input) { const f = input.files[0]; if (!f) return; document.getElementById('namaFileMateri').textContent = f.name; document.getElementById('previewMateriBox').classList.remove('d-none'); document.getElementById('previewMateriBox').classList.add('d-flex'); document.getElementById('zoneMateri').classList.add('d-none'); }
         function clearFileMateri() { document.getElementById('fileMateri').value = ''; document.getElementById('previewMateriBox').classList.add('d-none'); document.getElementById('previewMateriBox').classList.remove('d-flex'); document.getElementById('zoneMateri').classList.remove('d-none'); }
 
+        // Fungsi Highlight Sidebar Aktif
+        function setActiveSidebar(element) {
+            document.querySelectorAll('.index-item').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+        }
+
+        // =========================================================================
+        // MESIN SINKRONISASI 2 ARAH (SIDEBAR <--> CARD UTAMA)
+        // =========================================================================
+        
+        // Fungsi ini hanya bertugas meluncurkan (scroll) layar ke posisi yang pas
+        function bukaSectionUtama(idTopik, idTargetKonten = null) {
+            document.querySelectorAll('.index-item').forEach(el => el.classList.remove('active'));
+
+            const sectionTarget = document.getElementById('section-' + idTopik);
+            if (sectionTarget && !idTargetKonten) {
+                // Scroll mulus ke Card Utama
+                const y = sectionTarget.getBoundingClientRect().top + window.scrollY - 80;
+                window.scrollTo({top: y, behavior: 'smooth'});
+            }
+
+            // Jika mengeklik sub-konten (materi/tugas) di sidebar
+            if(idTargetKonten) {
+                setTimeout(() => {
+                    const kontenTarget = document.querySelector(idTargetKonten);
+                    if(kontenTarget && !kontenTarget.classList.contains('show')) {
+                        new bootstrap.Collapse(kontenTarget, { toggle: false }).show();
+                    }
+                    if (kontenTarget) {
+                        const y = kontenTarget.previousElementSibling.getBoundingClientRect().top + window.scrollY - 90;
+                        window.scrollTo({top: y, behavior: 'smooth'});
+                    }
+                }, 350); 
+            }
+        }
+
+        // Listener Otomatis untuk membuka/menutup Card secara bersilangan
+        let isSyncing = false; // Gembok anti macet (infinite loop)
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const mainCollapses = document.querySelectorAll('.course-chapter .collapse');
+            const sidebarCollapses = document.querySelectorAll('.sidebar-accordion .accordion-collapse');
+
+            // 1. JIKA SIDEBAR DIKLIK -> CARD UTAMA IKUT BUKA/TUTUP
+            sidebarCollapses.forEach(sideLaci => {
+                sideLaci.addEventListener('show.bs.collapse', function (e) {
+                    if (e.target !== this || isSyncing) return;
+                    isSyncing = true;
+                    
+                    const idTopik = this.id.replace('sideCollapse', '');
+                    const mainLaci = document.getElementById('collapseTopik' + idTopik);
+                    const titleWrapper = document.querySelector('#section-' + idTopik + ' .section-title-wrapper');
+
+                    if (mainLaci && !mainLaci.classList.contains('show')) {
+                        new bootstrap.Collapse(mainLaci, { toggle: false }).show();
+                        if(titleWrapper) titleWrapper.setAttribute('aria-expanded', 'true');
+                    }
+                    setTimeout(() => { isSyncing = false; }, 10);
+                });
+
+                sideLaci.addEventListener('hide.bs.collapse', function (e) {
+                    if (e.target !== this || isSyncing) return;
+                    isSyncing = true;
+                    
+                    const idTopik = this.id.replace('sideCollapse', '');
+                    const mainLaci = document.getElementById('collapseTopik' + idTopik);
+                    const titleWrapper = document.querySelector('#section-' + idTopik + ' .section-title-wrapper');
+
+                    if (mainLaci && mainLaci.classList.contains('show')) {
+                        new bootstrap.Collapse(mainLaci, { toggle: false }).hide();
+                        if(titleWrapper) titleWrapper.setAttribute('aria-expanded', 'false');
+                    }
+                    setTimeout(() => { isSyncing = false; }, 10);
+                });
+            });
+
+            // 2. JIKA CARD UTAMA DIKLIK -> SIDEBAR IKUT BUKA/TUTUP
+            mainCollapses.forEach(mainLaci => {
+                mainLaci.addEventListener('show.bs.collapse', function (e) {
+                    if (e.target !== this || isSyncing) return; // Abaikan jika yang diklik sub-materi
+                    isSyncing = true;
+                    
+                    const idTopik = this.id.replace('collapseTopik', '');
+                    const sidebarLaci = document.getElementById('sideCollapse' + idTopik);
+
+                    if (sidebarLaci && !sidebarLaci.classList.contains('show')) {
+                        new bootstrap.Collapse(sidebarLaci, { toggle: false }).show();
+                    }
+                    setTimeout(() => { isSyncing = false; }, 10);
+                });
+
+                mainLaci.addEventListener('hide.bs.collapse', function (e) {
+                    if (e.target !== this || isSyncing) return;
+                    isSyncing = true;
+                    
+                    const idTopik = this.id.replace('collapseTopik', '');
+                    const sidebarLaci = document.getElementById('sideCollapse' + idTopik);
+
+                    if (sidebarLaci && sidebarLaci.classList.contains('show')) {
+                        new bootstrap.Collapse(sidebarLaci, { toggle: false }).hide();
+                    }
+                    setTimeout(() => { isSyncing = false; }, 10);
+                });
+            });
+        });
+        // =========================================================================
+
         // Fitur Buka/Tutup Semua Section
         let isAllOpen = false;
         function toggleAllSections() {
-            // Ambil semua elemen laci yang ID-nya berawalan 'collapseTopik'
-            const sections = document.querySelectorAll('[id^="collapseTopik"]');
+            const sections = document.querySelectorAll('.course-chapter');
             const btnText = document.getElementById('textToggleAll');
             const btnIcon = document.querySelector('#btnToggleAll i');
 
-            isAllOpen = !isAllOpen; // Balikkan status
+            isAllOpen = !isAllOpen; 
 
             sections.forEach(section => {
-                // Gunakan class bawaan Bootstrap untuk memanipulasi collapse
-                const bsCollapse = new bootstrap.Collapse(section, { toggle: false });
-                if (isAllOpen) {
-                    bsCollapse.show(); // Buka
-                } else {
-                    bsCollapse.hide(); // Tutup
-                }
+                const targetId = section.querySelector('.section-title-wrapper').getAttribute('data-bs-target');
+                const collapseDiv = document.querySelector(targetId);
+                const bsCollapse = new bootstrap.Collapse(collapseDiv, { toggle: false });
+                
+                if (isAllOpen) { bsCollapse.show(); } else { bsCollapse.hide(); }
             });
 
-            // Ganti teks dan ikon tombol
             if (isAllOpen) {
                 btnText.innerText = "Tutup Semua Bab";
                 btnIcon.className = "bi bi-arrows-collapse me-1";
@@ -554,10 +750,8 @@ $deskripsi_mapel = !empty($mapel['Deskripsi']) ? $mapel['Deskripsi'] : 'Belum ad
             }
         }
 
-
         // Fungsi untuk Auto-Populate Form Edit Tugas
         function bukaModalEditTugas(btnElement) {
-            // Sedot data dari tombol yang diklik
             const id = btnElement.getAttribute('data-id');
             const judul = btnElement.getAttribute('data-judul');
             const deskripsi = btnElement.getAttribute('data-deskripsi');
@@ -565,25 +759,19 @@ $deskripsi_mapel = !empty($mapel['Deskripsi']) ? $mapel['Deskripsi'] : 'Belum ad
             const poin = btnElement.getAttribute('data-poin');
             const tipeFileStr = btnElement.getAttribute('data-tipe');
 
-            // Tempelkan data ke form modal
             document.getElementById('editTugasId').value = id;
             document.getElementById('editTugasJudul').value = judul;
             document.getElementById('editTugasDeskripsi').value = deskripsi;
             document.getElementById('editTugasDeadline').value = deadline;
             document.getElementById('editTugasPoin').value = poin;
 
-            // Logika cerdas untuk mencentang kembali checkbox jenis file
             const allowedFiles = tipeFileStr ? tipeFileStr.split(', ') : [];
             const checkboxes = document.querySelectorAll('.edit-tf-check');
-            checkboxes.forEach(cb => {
-                cb.checked = allowedFiles.includes(cb.value);
-            });
+            checkboxes.forEach(cb => { cb.checked = allowedFiles.includes(cb.value); });
 
-            // Tampilkan Modalnya
             new bootstrap.Modal(document.getElementById('modalEditTugas')).show();
         }
 
-        // Efek loading tombol simpan edit tugas
         document.getElementById('frmEditTugas').addEventListener('submit', function() {
             const b = document.getElementById('btnSubmitEditTugas');
             b.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Menyimpan...';
