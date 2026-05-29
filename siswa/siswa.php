@@ -2,6 +2,7 @@
 session_start();
 require '../login/koneksi.php';
 
+// Pastikan yang masuk adalah siswa
 if(!isset($_SESSION['role']) || $_SESSION['role'] != 'siswa'){
     header("Location: ../login/login.php");
     exit;
@@ -23,19 +24,16 @@ $query_status_sandi = mysqli_query($koneksi, "SELECT WajibUbahPassword FROM user
 $status_sandi = mysqli_fetch_assoc($query_status_sandi);
 $wajib_ubah = isset($status_sandi['WajibUbahPassword']) ? $status_sandi['WajibUbahPassword'] : 0;
 
-// 2. AMBIL DATA SISWA & PERBAIKAN BUG NAMA
+// 2. AMBIL DATA SISWA
 $query_siswa = mysqli_query($koneksi, "SELECT * FROM siswa WHERE IDUser = '$id_user'");
 $data_siswa = mysqli_fetch_assoc($query_siswa);
 
 $id_siswa = $data_siswa['IDSiswa'] ?? '';
 $kelas_siswa = $data_siswa['Kelas'] ?? '';
-$xp_siswa = $data_siswa['TotalXP'] ?? 0;
-
-// Menghindari bug "Undefined array key Nama"
 $nama_lengkap = $data_siswa['Nama'] ?? $data_siswa['NamaSiswa'] ?? 'Siswa';
 $nama_depan = htmlspecialchars(explode(' ', trim($nama_lengkap))[0]);
 
-// 3. SINKRONISASI DATA GAMIFIKASI SESUAI ATURAN MASTER LEVEL & ATURAN POIN
+// 3. SINKRONISASI DATA GAMIFIKASI
 $query_gami = mysqli_query($koneksi, "
     SELECT g.TotalPoint, ml.LevelAngka, ml.Gelar 
     FROM gamifikasi g
@@ -46,39 +44,57 @@ $query_gami = mysqli_query($koneksi, "
 
 if($query_gami && mysqli_num_rows($query_gami) > 0){
     $data_gami = mysqli_fetch_assoc($query_gami);
-    $xp_siswa = $data_gami['TotalPoint'] ?? 0;
+    $poin_siswa = $data_gami['TotalPoint'] ?? 0;
     $level_siswa = $data_gami['LevelAngka'] ?? 1;
     $gelar = $data_gami['Gelar'] ?? 'Beginner Accountant';
 } else {
-    // Jika data siswa baru belum tercatat di tabel gamifikasi, ambil level terendah dari master_level
+    // Jika siswa baru, ambil level terendah
     $q_lvl_min = mysqli_query($koneksi, "SELECT LevelAngka, Gelar FROM master_level ORDER BY BatasPoin ASC LIMIT 1");
     $d_min = mysqli_fetch_assoc($q_lvl_min);
-    $xp_siswa = 0;
+    $poin_siswa = 0;
     $level_siswa = $d_min['LevelAngka'] ?? 1;
     $gelar = $d_min['Gelar'] ?? 'Beginner Accountant';
 }
+// Alias untuk dipanggil di HTML
+$xp_siswa = $poin_siswa;
 
-if($data_gami = mysqli_fetch_assoc($query_gami)){
-    $xp_siswa = $data_gami['TotalPoint'] ?? 0;
-    $level_siswa = $data_gami['LevelAngka'] ?? 1;
-    $gelar = $data_gami['Gelar'] ?? 'Beginner Accountant';
-} else {
-    // Default jika siswa baru dan belum masuk tabel gamifikasi
-    $xp_siswa = 0; $level_siswa = 1; $gelar = 'Beginner Accountant';
-}
-
-// 4. KALKULASI RANKING GLOBAL LEADERBOARD
-$q_rank = mysqli_query($koneksi, "SELECT IDSiswa FROM gamifikasi ORDER BY TotalPoint DESC");
-$global_rank = '-';
+// 4. PERINGKAT KELAS
+$query_rank = mysqli_query($koneksi, "
+    SELECT s.IDSiswa, IFNULL(g.TotalPoint, 0) as TotalPoint
+    FROM siswa s 
+    LEFT JOIN gamifikasi g ON s.IDSiswa = g.IDSiswa 
+    WHERE s.Kelas = '$kelas_siswa'
+    ORDER BY TotalPoint DESC
+");
+$rank_siswa = '-';
 $rank_counter = 1;
-if ($q_rank) {
-    while($row = mysqli_fetch_assoc($q_rank)) {
-        if($row['IDSiswa'] == $id_siswa) { $global_rank = $rank_counter; break; }
+if ($query_rank) {
+    while($row = mysqli_fetch_assoc($query_rank)) {
+        if($row['IDSiswa'] == $id_siswa) { $rank_siswa = $rank_counter; break; }
         $rank_counter++;
     }
 }
 
-// 5. SISTEM QUOTE ACAK (Bisa dihubungkan ke database nantinya)
+// 5. KALKULASI TUGAS (HANYA DARI TOPIK YANG VALID DI KELAS INI)
+$q_tugas_pending = mysqli_query($koneksi, "
+    SELECT COUNT(t.IDTugas) as total_pending 
+    FROM tugas t
+    JOIN topik_mapel tm ON t.IDTopik = tm.IDTopik
+    WHERE tm.Kelas = '$kelas_siswa' 
+    AND t.IDTugas NOT IN (SELECT IDTugas FROM pengumpulan_tugas WHERE IDSiswa = '$id_siswa')
+");
+$tugas_pending = (mysqli_fetch_assoc($q_tugas_pending)['total_pending']) ?? 0;
+
+$q_tugas_selesai = mysqli_query($koneksi, "
+    SELECT COUNT(pt.IDPengumpulan) as total_selesai 
+    FROM pengumpulan_tugas pt
+    JOIN tugas t ON pt.IDTugas = t.IDTugas
+    JOIN topik_mapel tm ON t.IDTopik = tm.IDTopik
+    WHERE pt.IDSiswa = '$id_siswa' AND tm.Kelas = '$kelas_siswa'
+");
+$tugas_selesai = (mysqli_fetch_assoc($q_tugas_selesai)['total_selesai']) ?? 0;
+
+// 6. SISTEM QUOTE ACAK
 $quotes_fallback = [
     "Pendidikan adalah senjata paling mematikan di dunia, karena dengannya Anda dapat mengubah dunia. - Nelson Mandela",
     "Orang bijak belajar ketika mereka bisa. Orang bodoh belajar ketika mereka terpaksa. - Arthur Wellesley",
@@ -86,7 +102,6 @@ $quotes_fallback = [
     "Hiduplah seolah engkau mati besok. Belajarlah seolah engkau hidup selamanya. - Mahatma Gandhi"
 ];
 
-// Coba ambil dari database jika tabel quotes ada (Jika tidak ada/error, gunakan fallback)
 $quote_teks = "";
 $q_quote = @mysqli_query($koneksi, "SELECT TeksQuote, Tokoh FROM quotes ORDER BY RAND() LIMIT 1");
 if($q_quote && mysqli_num_rows($q_quote) > 0) {
@@ -96,7 +111,7 @@ if($q_quote && mysqli_num_rows($q_quote) > 0) {
     $quote_teks = $quotes_fallback[array_rand($quotes_fallback)];
 }
 
-// 6. AMBIL DAFTAR MAPEL
+// 7. AMBIL DAFTAR MAPEL
 $query_mapel = mysqli_query($koneksi, "
     SELECT m.*, g.NamaGuru 
     FROM mapel m 
@@ -104,17 +119,6 @@ $query_mapel = mysqli_query($koneksi, "
     WHERE m.Kelas LIKE '%\"$kelas_siswa\"%'
 ");
 $total_mapel = mysqli_num_rows($query_mapel);
-
-// 7. AMBIL TUGAS PENDING
-$q_tugas_pending = mysqli_query($koneksi, "
-    SELECT COUNT(t.IDTugas) as total_pending 
-    FROM tugas t
-    JOIN mapel m ON t.IDMapel = m.IDMapel
-    WHERE m.Kelas LIKE '%\"$kelas_siswa\"%' 
-    AND t.IDTugas NOT IN (SELECT IDTugas FROM pengumpulan_tugas WHERE IDSiswa = '$id_siswa')
-");
-$tugas_pending = (mysqli_fetch_assoc($q_tugas_pending)['total_pending']) ?? 0;
-
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -151,10 +155,18 @@ $tugas_pending = (mysqli_fetch_assoc($q_tugas_pending)['total_pending']) ?? 0;
         .hero-card::after { content: ''; position: absolute; top: -50px; right: -50px; width: 300px; height: 300px; background: radial-gradient(circle, rgba(14, 165, 233, 0.3) 0%, transparent 70%); border-radius: 50%; }
         .quote-box { background: rgba(255,255,255,0.1); backdrop-filter: blur(5px); border-left: 4px solid var(--secondary); padding: 15px; border-radius: 0 12px 12px 0; margin-top: 20px; max-width: 700px;}
 
-        /* KOTAK STATISTIK */
-        .stat-box { background: #fff; border-radius: 16px; padding: 20px; display: flex; align-items: center; gap: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); border: 1px solid #f1f5f9; transition: transform 0.3s; cursor: pointer; text-decoration: none; color: inherit; }
-        .stat-box:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(79,70,229,0.1); color: inherit; }
-        .stat-icon { width: 55px; height: 55px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+        /* KOTAK STATISTIK (DIPERBARUI) */
+        .stat-card { border-radius: 20px; transition: all 0.3s ease; position: relative; overflow: hidden; }
+        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 15px 30px rgba(0,0,0,0.08) !important; }
+        .stat-card::before { content: ''; position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; border-radius: 50%; opacity: 0.1; transition: 0.5s ease; }
+        .stat-card:hover::before { transform: scale(1.5); }
+        
+        .stat-rank::before { background: radial-gradient(circle, #fbbf24 0%, transparent 70%); }
+        .stat-pending::before { background: radial-gradient(circle, #ef4444 0%, transparent 70%); }
+        .stat-done::before { background: radial-gradient(circle, #10b981 0%, transparent 70%); }
+        .stat-xp::before { background: radial-gradient(circle, #3b82f6 0%, transparent 70%); }
+
+        .icon-circle { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 15px; }
 
         /* MAPEL TOOLBAR */
         .toolbar-mapel { background: #fff; border-radius: 12px; padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.02); margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 15px; justify-content: space-between; align-items: center;}
@@ -175,7 +187,7 @@ $tugas_pending = (mysqli_fetch_assoc($q_tugas_pending)['total_pending']) ?? 0;
         .btn-masuk { background: var(--primary-light); color: var(--primary); border: none; border-radius: 12px; font-weight: 700; padding: 10px; transition: 0.3s; }
         .btn-masuk:hover { background: var(--primary); color: #fff; }
 
-        /* MODE DAFTAR (LIST VIEW CSS - Gaya Google Classroom Diperbarui) */
+        /* MODE DAFTAR (LIST VIEW CSS) */
         #courseContainer.list-mode { display: block; }
         #courseContainer.list-mode .col-mapel { width: 100%; flex: 0 0 100%; max-width: 100%; margin-bottom: 15px; padding: 0; }
         #courseContainer.list-mode .mapel-card { 
@@ -190,11 +202,7 @@ $tugas_pending = (mysqli_fetch_assoc($q_tugas_pending)['total_pending']) ?? 0;
         #courseContainer.list-mode .info-wrapper { flex-grow: 1; max-width: 40%; }
         #courseContainer.list-mode .mapel-title { color: var(--text-dark) !important; font-size: 1.25rem; }
         #courseContainer.list-mode .text-muted.small i { display: inline-block; }
-        
-        /* Memunculkan dan menata letak Progress Bar di tengah */
         #courseContainer.list-mode .progress-container { display: block; width: 30%; margin-bottom: 0 !important; margin-top: 0 !important; margin-right: 25px; }
-        
-        /* Memunculkan dan menata letak Tombol di kanan */
         #courseContainer.list-mode .btn-wrapper { display: block; width: auto; margin-top: 0 !important; }
         #courseContainer.list-mode .btn-masuk { width: auto !important; padding: 10px 25px; border-radius: 50px; }
 
@@ -207,7 +215,6 @@ $tugas_pending = (mysqli_fetch_assoc($q_tugas_pending)['total_pending']) ?? 0;
             #courseContainer.list-mode .progress-container { width: 100%; margin-right: 0; margin-bottom: 15px !important; }
         }
 
-        /* FOOTER */
         .footer { margin-top: auto; background-color: #ffffff; border-top: 1px solid #e2e8f0; padding: 25px 0; color: var(--text-muted); font-size: 0.9rem; }
     </style>
 </head>
@@ -227,7 +234,6 @@ $tugas_pending = (mysqli_fetch_assoc($q_tugas_pending)['total_pending']) ?? 0;
             <div class="collapse navbar-collapse justify-content-end" id="mobileMenu">
                 <ul class="navbar-nav d-lg-none mb-3 mt-2 border-top pt-3">
                     <li class="nav-item"><a class="nav-link active fw-bold text-white" href="siswa.php"><i class="bi bi-house-door me-2"></i>Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link text-white" href="tugas.php"><i class="bi bi-book me-2"></i>Mata Pelajaran & Tugas</a></li>
                     <li class="nav-item"><a class="nav-link text-white" href="kalender.php"><i class="bi bi-calendar-event me-2"></i>Jadwal Pelajaran</a></li>
                     <li class="nav-item"><a class="nav-link text-white" href="gamifikasi.php"><i class="bi bi-trophy me-2"></i>Pusat Gamifikasi</a></li>
                     <li class="nav-item mt-2"><a class="nav-link text-danger fw-bold bg-white rounded text-center" href="../login/logout.php">Keluar Akun</a></li>
@@ -258,8 +264,7 @@ $tugas_pending = (mysqli_fetch_assoc($q_tugas_pending)['total_pending']) ?? 0;
                     <div class="text-muted small fw-bold mb-3 px-3 uppercase" style="letter-spacing: 1px;">MENU AKADEMIK</div>
                     <ul class="nav flex-column">
                         <li class="nav-item"><a class="nav-link active" href="siswa.php"><i class="bi bi-grid-1x2-fill me-3 fs-5 align-middle"></i> Dashboard</a></li>
-                        <li class="nav-item"><a class="nav-link" href="tugas.php"><i class="bi bi-journal-bookmark-fill me-3 fs-5 align-middle"></i> Ruang Kelas</a></li>
-                        <li class="nav-item"><a class="nav-link" href="kalender.php"><i class="bi bi-calendar2-week-fill me-3 fs-5 align-middle"></i> Jadwal & Agenda</a></li>
+                        <li class="nav-item"><a class="nav-link" href="jadwal.php"><i class="bi bi-calendar2-week-fill me-3 fs-5 align-middle"></i> Jadwal & Agenda</a></li>
                         <li class="nav-item mt-4 mb-2"><div class="text-muted small fw-bold px-3 uppercase" style="letter-spacing: 1px;">PRESTASI</div></li>
                         <li class="nav-item"><a class="nav-link text-warning" href="gamifikasi.php"><i class="bi bi-trophy-fill me-3 fs-5 align-middle"></i> Gamifikasi</a></li>
                     </ul>
@@ -281,49 +286,81 @@ $tugas_pending = (mysqli_fetch_assoc($q_tugas_pending)['total_pending']) ?? 0;
                             </div>
                         </div>
                         <div class="col-lg-4 mt-4 mt-lg-0 text-lg-end">
-                            <div class="bg-white bg-opacity-10 border border-white border-opacity-25 rounded-4 p-3 d-inline-block text-start" style="backdrop-filter: blur(10px);">
-                                <div class="d-flex align-items-center gap-3">
-                                    <div class="bg-warning text-dark rounded-circle d-flex justify-content-center align-items-center fw-bold fs-4 shadow-sm" style="width: 55px; height: 55px;">
-                                        <?= $level_siswa ?>
-                                    </div>
-                                    <div>
-                                        <h6 class="mb-0 text-warning fw-bold text-uppercase" style="letter-spacing: 1px;"><?= $gelar ?></h6>
-                                        <small class="text-white-50">Level Saat Ini</small>
+                            <a href="gamifikasi.php" > 
+                                <div class="bg-white bg-opacity-10 border border-white border-opacity-25 rounded-4 p-3 d-inline-block text-start" style="backdrop-filter: blur(10px);">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="bg-warning text-dark rounded-circle d-flex justify-content-center align-items-center fw-bold fs-4 shadow-sm" style="width: 55px; height: 55px;">
+                                            <?= $level_siswa ?>
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0 text-warning fw-bold text-uppercase" style="letter-spacing: 1px;"><?= $gelar ?></h6>
+                                            <small class="text-white-50">Level Saat Ini</small>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            </a>
                         </div>
                     </div>
                 </div>
 
                 <div class="row g-3 mb-4">
-                    <div class="col-md-4">
-                        <a href="leaderboard.php" class="stat-box text-decoration-none">
-                            <div class="stat-icon bg-success bg-opacity-10 text-success"><i class="bi bi-globe-americas"></i></div>
-                            <div>
-                                <h3 class="fw-bold mb-0 text-dark">#<?= $global_rank ?></h3>
-                                <span class="text-muted small fw-semibold">Peringkat Global (Leaderboard)</span>
+                    
+                    <div class="col-6 col-lg-3">
+                        <a href="peringkat_kelas.php" class="text-decoration-none">
+                            <div class="card stat-card stat-rank border-0 shadow-sm h-100 bg-white">
+                                <div class="card-body p-4 d-flex align-items-center gap-3">
+                                    <div class="icon-circle bg-warning bg-opacity-10 text-warning m-0"><i class="bi bi-trophy-fill"></i></div>
+                                    <div>
+                                        <h6 class="text-muted fw-bold mb-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">PERINGKAT KELAS</h6>
+                                        <h3 class="text-dark fw-bold mb-0">#<?= $rank_siswa ?></h3>
+                                    </div>
+                                </div>
                             </div>
                         </a>
                     </div>
-                    <div class="col-md-4">
-                        <a href="tugas.php" class="stat-box">
-                            <div class="stat-icon bg-danger bg-opacity-10 text-danger"><i class="bi bi-file-earmark-excel-fill"></i></div>
-                            <div>
-                                <h3 class="fw-bold mb-0 text-dark"><?= $tugas_pending ?></h3>
-                                <span class="text-muted small fw-semibold">Tugas Belum Selesai</span>
+
+                    <div class="col-6 col-lg-3">
+                        <a href="total_exp.php" class="text-decoration-none">
+                            <div class="card stat-card stat-xp border-0 shadow-sm h-100 bg-white">
+                                <div class="card-body p-4 d-flex align-items-center gap-3">
+                                    <div class="icon-circle bg-primary bg-opacity-10 text-primary m-0"><i class="bi bi-lightning-charge-fill"></i></div>
+                                    <div>
+                                        <h6 class="text-muted fw-bold mb-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">TOTAL EXP</h6>
+                                        <h3 class="text-dark fw-bold mb-0"><?= number_format($poin_siswa, 0, ',', '.') ?> <span class="fs-6 text-muted fw-normal">XP</span></h3>
+                                    </div>
+                                </div>
                             </div>
                         </a>
                     </div>
-                    <div class="col-md-4">
-                        <a href="gamifikasi.php" class="stat-box">
-                            <div class="stat-icon bg-warning bg-opacity-10 text-warning"><i class="bi bi-lightning-charge-fill"></i></div>
-                            <div>
-                                <h3 class="fw-bold mb-0 text-dark"><?= $xp_siswa ?> XP</h3>
-                                <span class="text-muted small fw-semibold">Total Poin Pengalaman</span>
+
+                    <div class="col-6 col-lg-3">
+                        <a href="tugas_belum_selesai.php" class="text-decoration-none">
+                            <div class="card stat-card stat-pending border-0 shadow-sm h-100 bg-white">
+                                <div class="card-body p-4 d-flex align-items-center gap-3">
+                                    <div class="icon-circle bg-danger bg-opacity-10 text-danger m-0"><i class="bi bi-journal-x"></i></div>
+                                    <div>
+                                        <h6 class="text-muted fw-bold mb-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">BELUM SELESAI</h6>
+                                        <h3 class="text-dark fw-bold mb-0"><?= $tugas_pending ?> <span class="fs-6 text-muted fw-normal">Tugas</span></h3>
+                                    </div>
+                                </div>
                             </div>
                         </a>
                     </div>
+
+                    <div class="col-6 col-lg-3">
+                        <a href="tugas_sudah_selesai.php" class="text-decoration-none">
+                            <div class="card stat-card stat-done border-0 shadow-sm h-100 bg-white">
+                                <div class="card-body p-4 d-flex align-items-center gap-3">
+                                    <div class="icon-circle bg-success bg-opacity-10 text-success m-0"><i class="bi bi-journal-check"></i></div>
+                                    <div>
+                                        <h6 class="text-muted fw-bold mb-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">SUDAH SELESAI</h6>
+                                        <h3 class="text-dark fw-bold mb-0"><?= $tugas_selesai ?> <span class="fs-6 text-muted fw-normal">Tugas</span></h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+
                 </div>
 
                 <div class="toolbar-mapel">
@@ -369,19 +406,18 @@ $tugas_pending = (mysqli_fetch_assoc($q_tugas_pending)['total_pending']) ?? 0;
                                 $cover_img = "../image/mapel/" . $row['Gambar'];
                             }
 
-                            // HITUNG DATA PROGRESS REALTIME (Tugas + Materi)
-                            $q_tot_tugas = mysqli_query($koneksi, "SELECT COUNT(IDTugas) as tot FROM tugas WHERE IDMapel = '$id_mapel_loop'");
+                            // HITUNG TUGAS SPESIFIK UNTUK KELAS SISWA INI SAJA
+                            $q_tot_tugas = mysqli_query($koneksi, "SELECT COUNT(t.IDTugas) as tot FROM tugas t JOIN topik_mapel tm ON t.IDTopik = tm.IDTopik WHERE t.IDMapel = '$id_mapel_loop' AND tm.Kelas = '$kelas_siswa'");
                             $tot_tugas = mysqli_fetch_assoc($q_tot_tugas)['tot'] ?? 0;
                             
-                            $q_selesai = mysqli_query($koneksi, "SELECT COUNT(pt.IDPengumpulan) as sel FROM pengumpulan_tugas pt JOIN tugas t ON pt.IDTugas = t.IDTugas WHERE t.IDMapel = '$id_mapel_loop' AND pt.IDSiswa = '$id_siswa'");
+                            $q_selesai = mysqli_query($koneksi, "SELECT COUNT(pt.IDPengumpulan) as sel FROM pengumpulan_tugas pt JOIN tugas t ON pt.IDTugas = t.IDTugas JOIN topik_mapel tm ON t.IDTopik = tm.IDTopik WHERE t.IDMapel = '$id_mapel_loop' AND pt.IDSiswa = '$id_siswa' AND tm.Kelas = '$kelas_siswa'");
                             $tot_selesai = mysqli_fetch_assoc($q_selesai)['sel'] ?? 0;
 
-                            // Ambil data jumlah total materi pada mapel ini
-                            $q_tot_materi = mysqli_query($koneksi, "SELECT COUNT(IDMateri) as tot FROM materi WHERE IDMapel = '$id_mapel_loop'");
+                            // HITUNG MATERI SPESIFIK UNTUK KELAS SISWA INI SAJA
+                            $q_tot_materi = mysqli_query($koneksi, "SELECT COUNT(m.IDMateri) as tot FROM materi m JOIN topik_mapel tm ON m.IDTopik = tm.IDTopik WHERE m.IDMapel = '$id_mapel_loop' AND tm.Kelas = '$kelas_siswa'");
                             $tot_materi = mysqli_fetch_assoc($q_tot_materi)['tot'] ?? 0;
 
-                            // Kumpulkan semua ID materi untuk dipisahkan dengan koma agar bisa dibaca JavaScript
-                            $q_materi_list = mysqli_query($koneksi, "SELECT IDMateri FROM materi WHERE IDMapel = '$id_mapel_loop'");
+                            $q_materi_list = mysqli_query($koneksi, "SELECT m.IDMateri FROM materi m JOIN topik_mapel tm ON m.IDTopik = tm.IDTopik WHERE m.IDMapel = '$id_mapel_loop' AND tm.Kelas = '$kelas_siswa'");
                             $materi_ids = [];
                             while($m_row = mysqli_fetch_assoc($q_materi_list)) {
                                 $materi_ids[] = 'materi_' . $m_row['IDMateri'];
@@ -405,6 +441,7 @@ $tugas_pending = (mysqli_fetch_assoc($q_tugas_pending)['total_pending']) ?? 0;
                                             <p class="small text-muted mb-3 flex-grow-1"><i class="bi bi-person-video3 me-1"></i> Guru: <span class="fw-semibold text-dark"><?= htmlspecialchars($row['NamaGuru'] ?? 'Belum Ditentukan') ?></span></p>
                                         </div>
                                         
+                                        <?php if(($tot_tugas + $tot_materi) > 0): ?>
                                         <div class="progress-container mb-3 mt-auto">
                                             <div class="d-flex justify-content-between align-items-center mb-1">
                                                 <span class="small text-muted fw-semibold" style="font-size: 0.75rem;">Progress Belajar</span>
@@ -414,6 +451,13 @@ $tugas_pending = (mysqli_fetch_assoc($q_tugas_pending)['total_pending']) ?? 0;
                                                 <div class="progress-bar bg-primary rounded-pill" role="progressbar" style="width: 0%"></div>
                                             </div>
                                         </div>
+                                        <?php else: ?>
+                                        <div class="mt-auto mb-3">
+                                            <span class="badge bg-light text-muted border border-secondary-subtle w-100 py-2 d-block">
+                                                <i class="bi bi-info-circle me-1"></i> Belum ada materi/tugas
+                                            </span>
+                                        </div>
+                                        <?php endif; ?>
 
                                         <div class="btn-wrapper mt-auto">
                                             <a href="mapel.php?id_mapel=<?= $row['IDMapel'] ?>" class="btn btn-masuk w-100 d-block text-center shadow-sm">
@@ -448,57 +492,8 @@ $tugas_pending = (mysqli_fetch_assoc($q_tugas_pending)['total_pending']) ?? 0;
         </div>
     </footer>
 
-    <?php if($wajib_ubah == 1): ?>
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        Swal.fire({
-            title: 'Keamanan Akun!',
-            text: 'Anda masih menggunakan kata sandi bawaan. Silakan perbarui sandi Anda sekarang untuk menjaga keamanan akun.',
-            icon: 'warning',
-            allowOutsideClick: false,
-            allowEscapeKey: false,
-            confirmButtonText: 'Simpan Sandi Baru',
-            confirmButtonColor: '#4f46e5',
-            input: 'password',
-            inputPlaceholder: 'Ketik sandi rahasia Anda...',
-            inputAttributes: { autocapitalize: 'off', autocorrect: 'off' },
-            inputValidator: (value) => {
-                if (!value) { return 'Sandi baru tidak boleh kosong!'; }
-                if (value.length < 5) { return 'Sandi minimal 5 karakter!'; }
-            },
-            showLoaderOnConfirm: true,
-            preConfirm: (password) => {
-                return fetch('proses_ubah_sandi_paksa.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: 'password_baru=' + encodeURIComponent(password)
-                })
-                .then(async response => {
-                    const text = await response.text();
-                    try {
-                        const data = JSON.parse(text);
-                        if (data.status === 'sukses') return data;
-                        else { Swal.showValidationMessage('Gagal: ' + data.pesan); return false; }
-                    } catch (e) {
-                        Swal.showValidationMessage('Error Sistem: ' + text.substring(0, 50)); return false;
-                    }
-                }).catch(error => { Swal.showValidationMessage('Koneksi Terputus: ' + error.message); return false; });
-            }
-        }).then((result) => {
-            if (result.isConfirmed) {
-                Swal.fire({ title: 'Akses Terbuka!', text: 'Sandi berhasil diamankan.', icon: 'success', timer: 1500, showConfirmButton: false })
-                .then(() => { location.reload(); });
-            }
-        });
-    });
-
-    
-    </script>
-    <?php endif; ?>
-    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // FUNGSI UBAH TAMPILAN (GRID / LIST)
         function setView(mode) {
             const container = document.getElementById('courseContainer');
             const btnGrid = document.getElementById('btnGrid');
@@ -515,7 +510,6 @@ $tugas_pending = (mysqli_fetch_assoc($q_tugas_pending)['total_pending']) ?? 0;
             }
         }
 
-        // FUNGSI PENCARIAN MAPEL
         function filterMapel() {
             let input = document.getElementById('searchMapel').value.toLowerCase();
             let cards = document.getElementsByClassName('col-mapel');
@@ -538,7 +532,6 @@ $tugas_pending = (mysqli_fetch_assoc($q_tugas_pending)['total_pending']) ?? 0;
             }
         }
 
-        // FUNGSI PENGURUTAN MAPEL (A-Z / Z-A)
         function sortMapel() {
             let sortType = document.getElementById('sortMapel').value;
             let container = document.getElementById('courseContainer');
@@ -547,18 +540,12 @@ $tugas_pending = (mysqli_fetch_assoc($q_tugas_pending)['total_pending']) ?? 0;
             cards.sort(function(a, b) {
                 let titleA = a.getAttribute('data-title');
                 let titleB = b.getAttribute('data-title');
-                
                 if (sortType === 'az') return titleA.localeCompare(titleB);
                 else return titleB.localeCompare(titleA);
             });
-
-            // Kosongkan container lalu masukkan kembali sesuai urutan
             cards.forEach(card => container.appendChild(card));
         }
-    </script>
 
-<script>
-        // FUNGSI SINKRONISASI PROGRESS BAR (GABUNGAN DATABASE TUGAS + LOCALSTORAGE MATERI)
         function sinkronisasiProgressBarLMS() {
             document.querySelectorAll('.col-mapel').forEach(card => {
                 const totalTugas = parseInt(card.getAttribute('data-total-tugas')) || 0;
@@ -566,7 +553,6 @@ $tugas_pending = (mysqli_fetch_assoc($q_tugas_pending)['total_pending']) ?? 0;
                 const totalMateri = parseInt(card.getAttribute('data-total-materi')) || 0;
                 const materiIdsStr = card.getAttribute('data-materi-ids') || '';
                 
-                // Hitung berapa materi yang sudah ditandai selesai di localStorage browser
                 let selesaiMateri = 0;
                 if (materiIdsStr) {
                     materiIdsStr.split(',').forEach(id => {
@@ -578,11 +564,8 @@ $tugas_pending = (mysqli_fetch_assoc($q_tugas_pending)['total_pending']) ?? 0;
                 
                 const totalItem = totalTugas + totalMateri;
                 const totalSelesai = selesaiTugas + selesaiMateri;
-                
-                // Rumus persentase baru
                 const persentase = totalItem > 0 ? Math.round((totalSelesai / totalItem) * 100) : 0;
                 
-                // Suntikkan nilai persentase baru ke UI Progress Bar & Teks Persen
                 const progressBars = card.querySelectorAll('.progress-bar');
                 const progressTexts = card.querySelectorAll('.progress-container .text-primary');
                 
@@ -591,7 +574,6 @@ $tugas_pending = (mysqli_fetch_assoc($q_tugas_pending)['total_pending']) ?? 0;
             });
         }
 
-        // Jalankan fungsi otomatis saat dashboard siswa dibuka
         document.addEventListener('DOMContentLoaded', sinkronisasiProgressBarLMS);
     </script>
 </body>
