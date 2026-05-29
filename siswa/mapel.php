@@ -255,6 +255,26 @@ function hitungWaktuTersisa($deadline_str, $tgl_kumpul_str = null) {
                             <?php endwhile; ?>
 
                             <?php 
+                            // RENDER KUIS
+                            $q_kuis = mysqli_query($koneksi, "SELECT * FROM kuis WHERE IDMapel='$id_mapel' AND IDTopik='$id_topik'");
+                            while($kq = mysqli_fetch_assoc($q_kuis)): $ada_konten = true; 
+                            ?>
+                                <div class="content-item" id="itemKuis<?= $kq['IDKuis'] ?>">
+                                    <div class="d-flex align-items-center flex-grow-1">
+                                        <div class="content-icon bg-warning bg-opacity-10 text-warning"><i class="bi bi-patch-question-fill"></i></div>
+                                        <div class="content-info">
+                                            <div class="content-title"><?= htmlspecialchars($kq['Judul']) ?></div>
+                                            <div class="small text-muted"><i class="bi bi-card-checklist me-1"></i> Evaluasi / Ujian</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <button class="btn-selesai text-warning border-warning" onclick="konfirmasiKuis('<?= $kq['IDKuis'] ?>', '<?= addslashes(htmlspecialchars($kq['Judul'])) ?>')">
+                                        <i class="bi bi-play-circle-fill me-1"></i> Mulai Ujian
+                                    </button>
+                                </div>
+                            <?php endwhile; ?>
+
+                            <?php 
                             $q_tugas_topik = mysqli_query($koneksi, "SELECT IDTugas FROM tugas WHERE IDMapel='$id_mapel' AND IDTopik='$id_topik'");
                             while($tgt = mysqli_fetch_assoc($q_tugas_topik)): 
                                 $tg = $semua_tugas[$tgt['IDTugas']];
@@ -605,6 +625,25 @@ function hitungWaktuTersisa($deadline_str, $tgl_kumpul_str = null) {
                 }, 300);
             }
         });
+
+        // Fungsi Konfirmasi Mulai Ujian
+        function konfirmasiKuis(idKuis, judulKuis) {
+            Swal.fire({
+                title: 'Mulai Ujian Sekarang?',
+                html: `Kamu akan mengerjakan: <br><b class="text-primary fs-5">${judulKuis}</b><br><br><span class="text-danger small"><i class="bi bi-exclamation-triangle-fill"></i> Waktu akan langsung berjalan dan tidak bisa dijeda. Sudah siap?</span>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#4f46e5',
+                cancelButtonColor: '#cbd5e1',
+                confirmButtonText: 'Ya, Mulai!',
+                cancelButtonText: 'Nanti Saja',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = `kerjakan_quiz.php?id_kuis=${idKuis}`;
+                }
+            });
+        }
     </script>
 </body>
 </html>
