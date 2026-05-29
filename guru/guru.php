@@ -236,7 +236,7 @@ $total_belum_dinilai = 0;
             </a>
         </div>
         <div class="col-6 col-sm-3">
-            <a href="kelola_mapel.php?id_mapel=<?= $id_mapel_pertama ?>&tab=quiz" class="qa-card">
+            <a href="javascript:void(0)" onclick="bukaModalMulti('kuis', '<?= $id_mapel_pertama ?>', '')" class="qa-card">
                 <div class="qa-icon" style="background:#fefce8;"><i class="bi bi-patch-question-fill" style="color:#d97706;"></i></div>
                 <div style="font-size:.82rem;font-weight:600;">Buat Quiz</div>
             </a>
@@ -528,6 +528,41 @@ document.addEventListener("DOMContentLoaded", function() {
     </div>
 </div>
 
+<div class="modal fade" id="modalBuatQuizMulti" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header bg-warning text-dark border-0 p-4">
+                <h5 class="modal-title fw-bold"><i class="bi bi-patch-question-fill me-2"></i>Buat Kuis / Ujian Cepat</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="buat_quiz.php" method="POST">
+                <div class="modal-body p-4 bg-light">
+                    <input type="hidden" name="id_mapel" id="kuisIdMapel">
+                    <input type="hidden" name="mode" value="multi">
+                    
+                    <div class="alert alert-warning bg-warning bg-opacity-10 border-warning border-opacity-25 mb-4">
+                        <strong><i class="bi bi-book me-2"></i>Mapel: </strong> <span id="kuisLabelMapel"></span>
+                    </div>
+
+                    <div class="mb-4 bg-white p-3 border rounded shadow-sm">
+                        <label class="form-label fw-bold text-dark small mb-3">Tugaskan ke Kelas Mana Saja? <span class="text-danger">*</span></label>
+                        <div id="kelasCheckboxKuis" class="d-flex flex-wrap gap-4"></div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary small">Pilih / Ketik Bab (Section) <span class="text-danger">*</span></label>
+                        <input class="form-control bg-white" list="listTopikKuis" name="nama_topik" placeholder="Contoh: Bab 1: Pendahuluan" required>
+                        <datalist id="listTopikKuis"></datalist>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-0 pb-4 pe-4">
+                    <button type="submit" class="btn btn-warning px-4 fw-bold shadow-sm w-100 text-dark">Lanjut Rakit Soal <i class="bi bi-arrow-right"></i></button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     // Membaca Data Mapel yang Diambil PHP
@@ -537,8 +572,8 @@ document.addEventListener("DOMContentLoaded", function() {
         const mapelInfo = dbMapelData[idMapel];
         if (!mapelInfo) return;
 
-        const containerKelas = document.getElementById(jenis === 'materi' ? 'kelasCheckboxMateri' : 'kelasCheckboxTugas');
-        const dataListTopik = document.getElementById(jenis === 'materi' ? 'listTopikMateri' : 'listTopikTugas');
+        const containerKelas = document.getElementById(jenis === 'materi' ? 'kelasCheckboxMateri' : (jenis === 'tugas' ? 'kelasCheckboxTugas' : 'kelasCheckboxKuis'));
+        const dataListTopik = document.getElementById(jenis === 'materi' ? 'listTopikMateri' : (jenis === 'tugas' ? 'listTopikTugas' : 'listTopikKuis'));
         
         // 1. Cetak Checkbox Kelas
         let htmlCb = '';
@@ -564,10 +599,14 @@ document.addEventListener("DOMContentLoaded", function() {
             document.getElementById('materiIdMapel').value = idMapel;
             document.getElementById('materiLabelMapel').innerText = mapelInfo.nama;
             new bootstrap.Modal(document.getElementById('modalUploadMateriMulti')).show();
-        } else {
+        } else if (jenis === 'tugas') {
             document.getElementById('tugasIdMapel').value = idMapel;
             document.getElementById('tugasLabelMapel').innerText = mapelInfo.nama;
             new bootstrap.Modal(document.getElementById('modalBuatTugasMulti')).show();
+        } else if (jenis === 'kuis') {
+            document.getElementById('kuisIdMapel').value = idMapel;
+            document.getElementById('kuisLabelMapel').innerText = mapelInfo.nama;
+            new bootstrap.Modal(document.getElementById('modalBuatQuizMulti')).show();
         }
     }
 </script>
