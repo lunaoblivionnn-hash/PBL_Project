@@ -33,13 +33,12 @@ $q_topik = mysqli_query($koneksi, "SELECT * FROM topik_mapel WHERE IDMapel = '$i
 $daftar_topik = [];
 while($t = mysqli_fetch_assoc($q_topik)) { $daftar_topik[] = $t; }
 
-// 4. PRE-LOAD SEMUA TUGAS & STATUS PENGUMPULAN UNTUK MODE SINGLE PAGE
+// 4. PRE-LOAD SEMUA TUGAS & STATUS PENGUMPULAN
 $q_semua_tugas = mysqli_query($koneksi, "SELECT * FROM tugas WHERE IDMapel='$id_mapel'");
 $semua_tugas = [];
 $tugas_selesai = [];
 while($rt = mysqli_fetch_assoc($q_semua_tugas)){
     $id_t = $rt['IDTugas'];
-    // Cek apakah siswa ini sudah mengumpulkan tugas ini
     $q_kumpul = mysqli_query($koneksi, "SELECT * FROM pengumpulan_tugas WHERE IDTugas='$id_t' AND IDSiswa='$id_siswa'");
     $kumpul = mysqli_fetch_assoc($q_kumpul);
     
@@ -49,11 +48,9 @@ while($rt = mysqli_fetch_assoc($q_semua_tugas)){
     if(!empty($kumpul)) { $tugas_selesai[] = $id_t; }
 }
 
-// Fungsi Bantuan Penghitung Waktu
 function hitungWaktuTersisa($deadline_str, $tgl_kumpul_str = null) {
     $deadline = strtotime($deadline_str);
     $now = time();
-    
     if($tgl_kumpul_str) {
         $kumpul = strtotime($tgl_kumpul_str);
         $diff = $deadline - $kumpul;
@@ -93,8 +90,6 @@ function hitungWaktuTersisa($deadline_str, $tgl_kumpul_str = null) {
             --gradient-primary: linear-gradient(135deg, #4f46e5, #0ea5e9);
         }
         body { background-color: var(--bg-light); color: var(--text-dark); font-family: 'Segoe UI', system-ui, sans-serif; overflow-x: hidden; }
-        
-        /* NAVBAR & SIDEBAR */
         .navbar-custom { background: var(--gradient-primary) !important; box-shadow: 0 2px 10px rgba(0,0,0,0.1); padding: 10px 0; z-index: 1030;}
         #wrapper { display: flex; width: 100%; align-items: stretch; min-height: calc(100vh - 66px); }
         #sidebar-course { min-width: 280px; max-width: 280px; background: #fff; border-right: 1px solid #e2e8f0; position: sticky; top: 66px; height: calc(100vh - 66px); overflow-y: auto; padding: 20px 15px; }
@@ -102,29 +97,27 @@ function hitungWaktuTersisa($deadline_str, $tgl_kumpul_str = null) {
         .index-item { display: block; padding: 10px 15px; color: #475569; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 0.9rem; transition: 0.2s; margin-bottom: 5px; cursor: pointer; }
         .index-item:hover { background: var(--primary-light); color: var(--primary); }
         .index-item.active { background: var(--primary); color: #fff; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.2); }
-
-        /* KONTEN UTAMA */
+        
         #main-content { width: 100%; padding: 40px; }
         .page-title { font-weight: 800; font-size: 2rem; color: var(--text-dark); margin-bottom: 5px; text-transform: uppercase;}
         
-        /* ACCORDION KELAS (DIPERBARUI) */
+        /* ACCORDION KELAS */
         .section-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.02); overflow: hidden;}
         .section-header { padding: 18px 25px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; transition: 0.2s; background: #fff; }
         .section-header:hover { background: #f8fafc; }
         .section-title { font-weight: 700; color: var(--text-dark); font-size: 1.15rem; margin: 0; display: flex; align-items: center;}
         
-        /* CSS TAMBAHAN UNTUK SIDEBAR ACCORDION SISWA & PANAH */
         .sidebar-accordion .accordion-button { padding: 10px 15px; color: #475569; border-radius: 8px; font-weight: 600; font-size: 0.9rem; margin-bottom: 2px; }
         .sidebar-accordion .accordion-button:not(.collapsed) { background: #e0e7ff; color: #4f46e5; box-shadow: none; }
         .sidebar-accordion .accordion-button:focus { box-shadow: none; }
         .sidebar-accordion .accordion-button::after { transform: scale(0.8); }
         .sidebar-subitem { display: block; padding: 6px 15px 6px 35px; font-size: 0.85rem; color: #64748b; text-decoration: none; transition: 0.2s; border-radius: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
         .sidebar-subitem:hover { color: #4f46e5; background: #f8fafc; }
+        
         .section-title-wrapper { display: flex; align-items: center; flex-grow: 1; cursor: pointer; }
         .toggle-icon { font-size: 1.2rem; color: #94a3b8; transition: transform 0.3s ease; }
         .section-title-wrapper[aria-expanded="true"] .toggle-icon { transform: rotate(90deg); color: var(--primary); }
         .section-title-wrapper[aria-expanded="true"] { border-bottom: 1px solid #e2e8f0; }
-
         .section-body { padding: 10px 25px 25px 25px; }
 
         /* ITEM KONTEN */
@@ -136,18 +129,21 @@ function hitungWaktuTersisa($deadline_str, $tgl_kumpul_str = null) {
         .content-info { flex-grow: 1; }
         .content-title { font-weight: 700; color: var(--text-dark); margin-bottom: 3px; font-size: 1.05rem; }
         
-        /* TOMBOL TANDAI SELESAI */
         .btn-selesai { border: 2px solid #cbd5e1; color: #64748b; background: transparent; border-radius: 6px; font-weight: 700; font-size: 0.8rem; padding: 6px 14px; transition: 0.3s; white-space: nowrap; }
         .btn-selesai:hover { border-color: #10b981; color: #10b981; background: #f0fdf4; }
         .btn-selesai.done { background: #10b981; border-color: #10b981; color: #fff; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); }
 
         /* TAMPILAN DETAIL TUGAS */
-        .tugas-detail-box { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); padding: 30px; margin-top: 20px; }
-        .tugas-table { border-collapse: separate; border-spacing: 0; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; width: 100%; }
+        .tugas-detail-box { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); padding: 30px; margin-bottom: 30px; }
+        .tugas-table { border-collapse: separate; border-spacing: 0; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; width: 100%; margin-bottom: 0; }
         .tugas-table th { background-color: #f8fafc; color: #475569; font-weight: 600; width: 30%; padding: 15px 20px; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; }
         .tugas-table td { padding: 15px 20px; border-bottom: 1px solid #e2e8f0; color: #334155; }
         .tugas-table tr:last-child th, .tugas-table tr:last-child td { border-bottom: none; }
         .status-hijau { background-color: #d1e7dd !important; color: #0f5132 !important; font-weight: 600;}
+        
+        .breadcrumb-custom { font-size: 0.9rem; font-weight: 600; color: #64748b; margin-bottom: 20px; }
+        .breadcrumb-custom a { color: var(--primary); text-decoration: none; }
+        .breadcrumb-custom a:hover { text-decoration: underline; }
 
         @media (max-width: 992px) { #sidebar-course { display: none; } #main-content { padding: 20px; } }
     </style>
@@ -190,14 +186,12 @@ function hitungWaktuTersisa($deadline_str, $tgl_kumpul_str = null) {
                     <div id="sideCollapse<?= $id_tp ?>" class="accordion-collapse collapse" data-bs-parent="#accordionSidebar">
                         <div class="accordion-body p-0 pb-2">
                             <?php 
-                            // Tarik daftar materi untuk sidebar
                             $q_sm = mysqli_query($koneksi, "SELECT IDMateri, Judul FROM materi WHERE IDMapel='$id_mapel' AND IDTopik='$id_tp'");
                             while($sm = mysqli_fetch_assoc($q_sm)): ?>
                                 <a href="javascript:void(0)" class="sidebar-subitem" onclick="bukaSectionUtama('<?= $id_tp ?>', '#itemMateri<?= $sm['IDMateri'] ?>')"><i class="bi bi-file-earmark-text text-primary me-2"></i><?= htmlspecialchars($sm['Judul']) ?></a>
                             <?php endwhile; ?>
                             
                             <?php 
-                            // Tarik daftar tugas untuk sidebar
                             $q_st = mysqli_query($koneksi, "SELECT IDTugas, Judul FROM tugas WHERE IDMapel='$id_mapel' AND IDTopik='$id_tp'");
                             while($st = mysqli_fetch_assoc($q_st)): ?>
                                 <a href="javascript:void(0)" class="sidebar-subitem" onclick="openTaskDetail('<?= $st['IDTugas'] ?>')"><i class="bi bi-journal-check text-success me-2"></i><?= htmlspecialchars($st['Judul']) ?></a>
@@ -215,6 +209,7 @@ function hitungWaktuTersisa($deadline_str, $tgl_kumpul_str = null) {
 
         <main id="main-content">
             
+            <!-- SECTION 1: KOTAK BERANDA KELAS (Daftar Akordion Bab) -->
             <div id="course-list-view">
                 <div class="d-flex justify-content-between align-items-end mb-4">
                     <div>
@@ -241,7 +236,6 @@ function hitungWaktuTersisa($deadline_str, $tgl_kumpul_str = null) {
                             
                             <?php $ada_konten = false;
                             
-                            // 1. RENDER MATERI (KLIK -> AUTO DOWNLOAD)
                             $q_materi = mysqli_query($koneksi, "SELECT * FROM materi WHERE IDMapel='$id_mapel' AND IDTopik='$id_topik'");
                             while($mt = mysqli_fetch_assoc($q_materi)): $ada_konten = true; 
                             ?>
@@ -250,13 +244,8 @@ function hitungWaktuTersisa($deadline_str, $tgl_kumpul_str = null) {
                                         <div class="content-icon icon-materi"><i class="bi bi-file-earmark-arrow-down-fill"></i></div>
                                         <div class="content-info">
                                             <div class="content-title"><?= htmlspecialchars($mt['Judul']) ?></div>
-                                            <?php 
-                                            $file_asli_materi = explode('_', $mt['Filepath']);
-                                            array_shift($file_asli_materi); array_shift($file_asli_materi); array_shift($file_asli_materi);
-                                            $nama_bersih_materi = !empty($file_asli_materi) ? implode('_', $file_asli_materi) : basename($mt['Filepath']);
-                                            if($nama_bersih_materi == "") $nama_bersih_materi = $mt['Filepath'];
-                                            ?>
-                                            <div class="small text-muted"><i class="bi bi-cloud-download me-1"></i> Unduh: <?= htmlspecialchars($nama_bersih_materi) ?></div>
+                                            <!-- NAMA FILE ASLI MURNI DARI DATABASE -->
+                                            <div class="small text-muted"><i class="bi bi-cloud-download me-1"></i> Unduh: <?= htmlspecialchars($mt['Filepath']) ?></div>
                                         </div>
                                     </a>
                                     <button class="btn-selesai" onclick="toggleSelesai(this, 'materi_<?= $mt['IDMateri'] ?>')">
@@ -265,7 +254,6 @@ function hitungWaktuTersisa($deadline_str, $tgl_kumpul_str = null) {
                                 </div>
                             <?php endwhile; ?>
 
-                            // 2. RENDER TUGAS
                             <?php 
                             $q_tugas_topik = mysqli_query($koneksi, "SELECT IDTugas FROM tugas WHERE IDMapel='$id_mapel' AND IDTopik='$id_topik'");
                             while($tgt = mysqli_fetch_assoc($q_tugas_topik)): 
@@ -302,30 +290,33 @@ function hitungWaktuTersisa($deadline_str, $tgl_kumpul_str = null) {
                 <?php endforeach; ?>
             </div>
 
+            <!-- SECTION 2: LACI DETAIL TUGAS (Tampil saat tugas di-klik) -->
             <?php foreach($semua_tugas as $id_tugas => $tugas): 
                 $kumpul = $tugas['pengumpulan'];
                 $is_submitted = !empty($kumpul);
+                
+                // Cari Nama Topik untuk Breadcrumb
+                $nama_topik_tgs = '';
+                foreach($daftar_topik as $t){ if($t['IDTopik'] == $tugas['IDTopik']){ $nama_topik_tgs = $t['NamaTopik']; break; } }
             ?>
             <div id="task-detail-<?= $id_tugas ?>" class="d-none task-view-container">
                 
-                <nav aria-label="breadcrumb" class="mb-4">
-                    <ol class="breadcrumb small fw-semibold">
-                        <li class="breadcrumb-item"><a href="#" onclick="showCourseList()" class="text-decoration-none text-muted">Beranda Kelas</a></li>
-                        <li class="breadcrumb-item active text-primary" aria-current="page"><?= htmlspecialchars($tugas['Judul']) ?></li>
-                    </ol>
-                </nav>
-
-                <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
-                    <h2 class="fw-bold text-dark mb-0 d-flex align-items-center gap-3">
-                        <i class="bi bi-journal-text text-danger"></i> <?= htmlspecialchars($tugas['Judul']) ?>
-                    </h2>
-                    <button class="btn-selesai <?= $is_submitted ? 'done' : '' ?>" disabled style="opacity: 1;">
-                        <i class="bi <?= $is_submitted ? 'bi-check-circle-fill' : 'bi-circle' ?> me-1"></i> Selesai
-                    </button>
+                <div class="breadcrumb-custom">
+                    <i class="bi bi-folder2-open me-1"></i> <a href="#" onclick="showCourseList()">Beranda Kelas</a> <i class="bi bi-chevron-right mx-1 text-muted" style="font-size:0.7rem;"></i> <?= htmlspecialchars($nama_topik_tgs) ?>
                 </div>
 
                 <div class="tugas-detail-box">
-                    
+                    <div class="d-flex justify-content-between align-items-start mb-4 border-bottom pb-3">
+                        <h3 class="fw-bold text-dark mb-0 d-flex align-items-center gap-3">
+                            <i class="bi bi-journal-text text-danger fs-2"></i> <?= htmlspecialchars($tugas['Judul']) ?>
+                        </h3>
+                        <div class="d-flex gap-2">
+                            <button class="btn-selesai <?= $is_submitted ? 'done' : '' ?>" disabled style="opacity: 1;">
+                                <i class="bi <?= $is_submitted ? 'bi-check-circle-fill' : 'bi-circle' ?> me-1"></i> Selesai
+                            </button>
+                        </div>
+                    </div>
+
                     <div class="bg-light p-4 rounded-3 border mb-4">
                         <h6 class="fw-bold text-dark mb-3"><i class="bi bi-info-square me-2 text-primary"></i>Instruksi Pengerjaan / Soal:</h6>
                         <div class="text-dark mb-3" style="line-height: 1.7;">
@@ -372,10 +363,10 @@ function hitungWaktuTersisa($deadline_str, $tgl_kumpul_str = null) {
                             <td>
                                 <?php if($is_submitted): 
                                     $file_db = $kumpul['FileJawaban'] ?? $kumpul['FileKumpul'] ?? '';
-                                    $nama_file_clean = basename($file_db);
                                 ?>
+                                    <!-- NAMA FILE ASLI MURNI DARI DATABASE -->
                                     <a href="../uploads/tugas/<?= htmlspecialchars($file_db) ?>" target="_blank" class="text-decoration-none fw-bold text-primary">
-                                        <i class="bi bi-file-earmark-arrow-down-fill me-1"></i> <?= htmlspecialchars($nama_file_clean) ?>
+                                        <i class="bi bi-file-earmark-arrow-down-fill me-1"></i> <?= htmlspecialchars($file_db) ?>
                                     </a>
                                 <?php else: ?>
                                     -
@@ -407,12 +398,6 @@ function hitungWaktuTersisa($deadline_str, $tgl_kumpul_str = null) {
                     </div>
                     <?php endif; ?>
                 </div>
-
-                <div class="mt-4 pt-3 border-top d-flex justify-content-between">
-                    <button class="btn btn-light border px-4 fw-bold text-secondary" onclick="showCourseList()">
-                        <i class="bi bi-arrow-left me-1"></i> Kembali ke Daftar Topik
-                    </button>
-                </div>
             </div>
             <?php endforeach; ?>
 
@@ -422,8 +407,7 @@ function hitungWaktuTersisa($deadline_str, $tgl_kumpul_str = null) {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
-        // --- LOGIKA SINGLE PAGE & DUA ARAH (TWO-WAY BINDING) ---
-        let isSyncing = false; // Gembok anti infinite loop
+        let isSyncing = false; 
 
         function showCourseList() {
             document.querySelectorAll('.task-view-container').forEach(el => el.classList.add('d-none'));
@@ -440,7 +424,6 @@ function hitungWaktuTersisa($deadline_str, $tgl_kumpul_str = null) {
             document.querySelectorAll('.index-item').forEach(el => el.classList.remove('active'));
         }
 
-        // Meluncur otomatis ke target di daftar bab
         function bukaSectionUtama(idTopik, idTargetKonten = null) {
             document.querySelectorAll('.index-item').forEach(el => el.classList.remove('active'));
             showCourseList(); 
@@ -462,7 +445,6 @@ function hitungWaktuTersisa($deadline_str, $tgl_kumpul_str = null) {
             }
         }
 
-        // Listener Otomatis untuk sinkronisasi buka tutup (Sidebar <-> Utama)
         document.addEventListener('DOMContentLoaded', function () {
             const mainCollapses = document.querySelectorAll('.course-chapter .collapse');
             const sidebarCollapses = document.querySelectorAll('.sidebar-accordion .accordion-collapse');
@@ -471,26 +453,21 @@ function hitungWaktuTersisa($deadline_str, $tgl_kumpul_str = null) {
                 sideLaci.addEventListener('show.bs.collapse', function (e) {
                     if (e.target !== this || isSyncing) return;
                     isSyncing = true;
-                    
                     const idTopik = this.id.replace('sideCollapse', '');
                     const mainLaci = document.getElementById('collapseTopik' + idTopik);
                     const titleWrapper = document.querySelector('#section-' + idTopik + ' .section-title-wrapper');
-
                     if (mainLaci && !mainLaci.classList.contains('show')) {
                         new bootstrap.Collapse(mainLaci, { toggle: false }).show();
                         if(titleWrapper) titleWrapper.setAttribute('aria-expanded', 'true');
                     }
                     setTimeout(() => { isSyncing = false; }, 10);
                 });
-
                 sideLaci.addEventListener('hide.bs.collapse', function (e) {
                     if (e.target !== this || isSyncing) return;
                     isSyncing = true;
-                    
                     const idTopik = this.id.replace('sideCollapse', '');
                     const mainLaci = document.getElementById('collapseTopik' + idTopik);
                     const titleWrapper = document.querySelector('#section-' + idTopik + ' .section-title-wrapper');
-
                     if (mainLaci && mainLaci.classList.contains('show')) {
                         new bootstrap.Collapse(mainLaci, { toggle: false }).hide();
                         if(titleWrapper) titleWrapper.setAttribute('aria-expanded', 'false');
@@ -503,23 +480,18 @@ function hitungWaktuTersisa($deadline_str, $tgl_kumpul_str = null) {
                 mainLaci.addEventListener('show.bs.collapse', function (e) {
                     if (e.target !== this || isSyncing) return; 
                     isSyncing = true;
-                    
                     const idTopik = this.id.replace('collapseTopik', '');
                     const sidebarLaci = document.getElementById('sideCollapse' + idTopik);
-
                     if (sidebarLaci && !sidebarLaci.classList.contains('show')) {
                         new bootstrap.Collapse(sidebarLaci, { toggle: false }).show();
                     }
                     setTimeout(() => { isSyncing = false; }, 10);
                 });
-
                 mainLaci.addEventListener('hide.bs.collapse', function (e) {
                     if (e.target !== this || isSyncing) return;
                     isSyncing = true;
-                    
                     const idTopik = this.id.replace('collapseTopik', '');
                     const sidebarLaci = document.getElementById('sideCollapse' + idTopik);
-
                     if (sidebarLaci && sidebarLaci.classList.contains('show')) {
                         new bootstrap.Collapse(sidebarLaci, { toggle: false }).hide();
                     }
@@ -528,19 +500,16 @@ function hitungWaktuTersisa($deadline_str, $tgl_kumpul_str = null) {
             });
         });
 
-        // --- FITUR BUKA/TUTUP SEMUA BAB ---
         let isAllOpen = false;
         function toggleAllChapters() {
             const sections = document.querySelectorAll('.course-chapter .collapse');
             const btnText = document.getElementById('txtToggleAll');
             const btnIcon = document.querySelector('#btnToggleAll i');
-            
             isAllOpen = !isAllOpen;
             sections.forEach(section => {
                 const bsCollapse = new bootstrap.Collapse(section, { toggle: false });
                 if(isAllOpen) bsCollapse.show(); else bsCollapse.hide();
             });
-
             if (isAllOpen) {
                 btnText.innerText = "Tutup Semua Bab";
                 btnIcon.className = "bi bi-arrows-collapse me-1";
@@ -550,41 +519,47 @@ function hitungWaktuTersisa($deadline_str, $tgl_kumpul_str = null) {
             }
         }
 
-        // --- FITUR TANDAI SELESAI (MATERI) LOCAL STORAGE ---
+        // FITUR TANDAI SELESAI & ANTI-SPAM POIN
         function toggleSelesai(btn, idItem) {
             let isDone = btn.classList.contains('done');
             if(!isDone) {
+                // Ubah UI seketika
                 btn.classList.add('done');
                 btn.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Selesai';
                 localStorage.setItem(idItem, 'selesai');
                 
-                // Panggil backend untuk tambahkan Poin Gamifikasi ke DB (AJAX)
-                fetch('proses_poin_materi.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: 'id_materi=' + encodeURIComponent(idItem)
-                })
-                .then(response => response.text())
-                .then(points => {
-                    Swal.fire({ 
-                        title: 'Materi Selesai! 📚', 
-                        text: 'Selamat! +' + points + ' XP Berhasil Ditambahkan ke Riwayat Poin Anda.', 
-                        icon: 'success', 
-                        toast: true, 
-                        position: 'bottom-end', 
-                        showConfirmButton: false, 
-                        timer: 3500,
-                        timerProgressBar: true
-                    });
-                });
+                // Cek memori browser: Apakah poin ini sudah diklaim sebelumnya?
+                if(!localStorage.getItem(idItem + '_klaim')) {
+                    fetch('proses_poin_materi.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: 'id_materi=' + encodeURIComponent(idItem)
+                    })
+                    .then(response => response.json()) // Baca respon sebagai JSON (bersih)
+                    .then(data => {
+                        if(data.status === 'sukses') {
+                            localStorage.setItem(idItem + '_klaim', 'true'); // Kunci agar tidak spam
+                            Swal.fire({ 
+                                title: 'Materi Selesai! 📚', 
+                                html: `Selamat! <b>+${data.poin} XP</b> berhasil ditambahkan.`, 
+                                icon: 'success', 
+                                toast: true, 
+                                position: 'bottom-end', 
+                                showConfirmButton: false, 
+                                timer: 4000, 
+                                timerProgressBar: true 
+                            });
+                        }
+                    }).catch(error => console.log(error));
+                }
             } else {
+                // Boleh un-check UI, TAPI poin yang sudah masuk ke DB tetap aman (tidak nambah lagi jika diklik ulang)
                 btn.classList.remove('done');
                 btn.innerHTML = '<i class="bi bi-circle me-1"></i> Tandai Selesai';
                 localStorage.removeItem(idItem);
             }
         }
 
-        // Load state memori browser saat halaman dibuka
         document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.btn-selesai').forEach(btn => {
                 let idItem = btn.getAttribute('onclick');
@@ -616,5 +591,20 @@ function hitungWaktuTersisa($deadline_str, $tgl_kumpul_str = null) {
     </script>
     <?php endif; ?>
 
+    <script>
+        // ==============================================================
+        // SENSOR AUTO-OPEN TUGAS DARI HALAMAN LUAR (SMART URL)
+        // ==============================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const openTugasId = urlParams.get('open_tugas');
+            
+            if (openTugasId) {
+                setTimeout(() => {
+                    openTaskDetail(openTugasId);
+                }, 300);
+            }
+        });
+    </script>
 </body>
 </html>
