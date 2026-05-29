@@ -2,315 +2,236 @@
 session_start();
 require '../login/koneksi.php';
 
-// Pastikan yang masuk adalah akun dengan role siswa
+// Pastikan yang masuk adalah siswa
 if(!isset($_SESSION['role']) || $_SESSION['role'] != 'siswa'){
-    header("Location: ../login/login.php");
-    exit;
+    header("Location: ../login/login.php"); exit;
 }
 
-$id_user = isset($_SESSION['IDUser']) ? $_SESSION['IDUser'] : '';
+$id_user = $_SESSION['IDUser'] ?? '';
 
-// 1. Ambil Data Siswa Lengkap
+// 1. Ambil Data Siswa
 $query_siswa = mysqli_query($koneksi, "SELECT * FROM siswa WHERE IDUser = '$id_user'");
 $data_siswa = mysqli_fetch_assoc($query_siswa);
-$id_siswa = isset($data_siswa['IDSiswa']) ? $data_siswa['IDSiswa'] : '';
+$id_siswa = $data_siswa['IDSiswa'] ?? '';
+$kelas_siswa = $data_siswa['Kelas'] ?? '';
+$nama_lengkap = $data_siswa['Nama'] ?? $data_siswa['NamaSiswa'] ?? 'Siswa';
 
-// // 2. Ambil Riwayat Poin (XP) Siswa untuk Log Aktivitas Gamifikasi// GANTI BARIS 19 JADI SEPERTI INI:
-// $query_log = mysqli_query($koneksi, "SELECT * FROM log_xp WHERE IDSiswa = '$id_siswa' ORDER BY Tanggal DESC LIMIT 5\");
+// 2. Ambil Aturan Poin dari Database
+$query_rules = mysqli_query($koneksi, "SELECT * FROM master_aturan_poin ORDER BY IDAturan ASC");
 
-// 3. Ambil Data Peringkat / Leaderboard Global Siswa
-// $query_leaderboard = mysqli_query($koneksi, "SELECT * FROM siswa ORDER BY TotalXP DESC LIMIT 10\");
+// 3. Ambil Master Level dari Database
+$query_ranks = mysqli_query($koneksi, "SELECT * FROM master_level ORDER BY BatasPoin ASC");
+
+// 4. Ambil Total Poin Siswa Saat Ini
+$query_gami = mysqli_query($koneksi, "SELECT TotalPoint FROM gamifikasi WHERE IDSiswa = '$id_siswa'");
+$poin_siswa = (mysqli_num_rows($query_gami) > 0) ? mysqli_fetch_assoc($query_gami)['TotalPoint'] : 0;
+
+// Kosmetik Tampilan (Icon & Warna)
+$icons = ['bi-book-half', 'bi-journal-check', 'bi-lightning-charge-fill', 'bi-stopwatch-fill', 'bi-calendar-check-fill', 'bi-star-fill'];
+$colors = ['primary', 'success', 'warning', 'info', 'secondary', 'danger'];
+$badges = ['🥉', '🥈', '🥈', '🥇', '🥇', '🏅', '🏅', '💎', '💎', '🌟', '🌟', '🌟', '👑'];
+
+// Kamus Deskripsi Manual untuk Aturan Poin
+$desc_map = [
+    'Baca Materi' => 'Otomatis didapat saat kamu membuka dan menandai materi selesai.',
+    'Nilai Tugas' => 'Dikonversi dari nilai murni hasil pengerjaan tugasmu.',
+    'Bonus Kilat' => 'Kumpulkan tugas super cepat (< 24 jam sejak diposting).',
+    'Bonus Cepat' => 'Kumpulkan tugas dengan cepat (< 48 jam sejak diposting).',
+    'Bonus Disiplin' => 'Kumpulkan tugas tepat waktu (sebelum batas deadline).',
+    'Bonus Sempurna' => 'Tambahan XP apresiasi jika kamu mendapat nilai 100.'
+];
 ?>
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Learning System Management SMKN 1 Wongsorejo</title>
+    <title>Pusat Gamifikasi - LMS Wongsorejo</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     
     <style>
-        :root {
-            --primary-gradient: linear-gradient(135deg, #dc3545, #9b1c26);
-            --card-gradient: linear-gradient(135deg, #1e1e2f, #111119);
-        }
+        :root { --primary: #4f46e5; --text-dark: #1e293b; --text-muted: #64748b; }
+        body { background-color: #f8fafc; font-family: 'Segoe UI', system-ui, sans-serif; display: flex; flex-direction: column; min-height: 100vh;}
         
-        /* Memaksa tinggi penuh layar tanpa margin bocor */
-        html, body { 
-            height: 100%;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f6f9; 
-            color: #333; 
-            font-family: 'Segoe UI', system-ui, sans-serif;
-        }
+        .navbar-custom { background: linear-gradient(135deg, #4f46e5, #0ea5e9) !important; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.2); padding: 10px 0; }
+        .sidebar { background-color: #fff; box-shadow: 2px 0 20px rgba(0,0,0,0.03); padding: 25px 15px; z-index: 100; min-height: calc(100vh - 70px); }
+        .sidebar .nav-link { color: var(--text-muted); font-weight: 600; padding: 12px 20px; border-radius: 12px; margin-bottom: 8px; transition: all 0.3s ease; }
+        .sidebar .nav-link:hover { background-color: #f1f5f9; color: var(--primary); transform: translateX(5px); }
+        .sidebar .nav-link.active { background-color: #e0e7ff; color: var(--primary); }
         
-        /* Navbar Atas - Merah Marun Gradasi */
-        .navbar-custom { 
-            background: var(--primary-gradient) !important; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
-        }
+        .breadcrumb-modern { font-size: 0.9rem; font-weight: 600; color: var(--text-muted); margin-bottom: 20px; }
+        .breadcrumb-modern a { color: var(--primary); text-decoration: none; transition: 0.2s; }
         
-        /* Sidebar Samping Menu Navigasi - Panjang Kebawah Penuh 1 Layar */
-        .sidebar {
-            background-color: #fff !important;
-            box-shadow: 4px 0 12px rgba(0,0,0,0.05);
-            border-radius: 0px 12px 12px 0px;
-            padding: 20px 15px;
-            min-height: calc(100vh - 56px);
-            height: 100%;
-        }
-
-        .sidebar .nav-link {
-            color: #495057 !important;
-            font-weight: 500;
-            transition: all 0.2s ease;
-            border-radius: 8px;
-            margin-bottom: 4px;
-        }
-
-        .sidebar .nav-link:hover, .sidebar .nav-link.active {
-            background: rgba(220, 53, 69, 0.1) !important;
-            color: #dc3545 !important;
-        }
+        .hero-banner { background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 20px; color: white; padding: 40px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(30,27,75,0.15); margin-bottom: 30px;}
+        .hero-banner::after { content:''; position:absolute; top:-50%; right:-20%; width: 400px; height: 400px; background: radial-gradient(circle, rgba(14,165,233,0.3) 0%, transparent 70%); border-radius:50%; }
         
-        /* Card Status Utama (Total Poin dll) - Tema Gelap Gamifikasi Dashboard */
-        .card.bg-primary { 
-            background: var(--card-gradient) !important; 
-            color: white !important; 
-            border: none !important; 
-            border-radius: 16px; 
-            box-shadow: 0 8px 20px rgba(0,0,0,0.15); 
-            position: relative;
-            overflow: hidden;
-        }
-
-        .card.bg-primary::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -20%;
-            width: 200px;
-            height: 200px;
-            background: rgba(220, 53, 69, 0.15);
-            filter: blur(40px);
-            border-radius: 50%;
-        }
-
-        /* Progress Bar XP Berkilau Emas */
-        .progress {
-            background-color: rgba(25, 25, 25, 0.2) !important;
-            height: 10px;
-            border-radius: 10px;
-        }
-
-        .progress-bar {
-            background: linear-gradient(90deg, #ffc107, #ff8800) !important;
-            box-shadow: 0 0 8px #ffc107;
-        }
-
-        /* Card Box Konten Putih (Leaderboard & Log) */
-        .card { 
-            border: none !important; 
-            border-radius: 16px; 
-            background-color: #fff !important; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.04); 
-        }
-
-        .card-title {
-            color: #212529 !important;
-            font-weight: 700;
-        }
-
-        /* Badge Poin (+XP) */
-        .point-badge {
-            background: rgba(220, 53, 69, 0.1) !important;
-            color: #dc3545 !important;
-            font-weight: 700;
-            font-size: 0.85rem;
-            padding: 0.4rem 0.8rem;
-            border-radius: 50px;
-        }
-
-        /* Memaksa Teks List Kategori Tetap Berwarna Gelap Kontras */
-        .list-group-item h6, .list-group-item .text-dark, .list-group-item fw-bold {
-            color: #212529 !important;
-        }
-
-        .list-group-item {
-            border-color: #f1f1f1 !important;
-            background-color: transparent !important;
-        }
+        .master-card { border: none; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); background: #fff; border: 1px solid #e2e8f0; height: 100%; }
+        .master-card-header { background: #fff; border-bottom: 1px solid #f1f5f9; padding: 1.5rem; border-radius: 16px 16px 0 0; }
+        
+        .rule-card { border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; margin-bottom: 12px; transition: 0.3s; border-left: 4px solid transparent; }
+        .rule-card:hover { transform: translateY(-3px); box-shadow: 0 8px 15px rgba(0,0,0,0.05); }
+        .rule-card.border-primary { border-left-color: #0d6efd !important; }
+        .rule-card.border-success { border-left-color: #198754 !important; }
+        .rule-card.border-warning { border-left-color: #ffc107 !important; }
+        .rule-card.border-info { border-left-color: #0dcaf0 !important; }
+        .rule-card.border-secondary { border-left-color: #6c757d !important; }
+        .rule-card.border-danger { border-left-color: #dc3545 !important; }
+        
+        .icon-circle { width: 45px; height: 45px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; }
+        
+        .rank-table th { background-color: #f8fafc; color: #475569; font-weight: 700; text-transform: uppercase; font-size: 0.8rem; padding: 15px;}
+        .rank-table td { vertical-align: middle; padding: 15px; font-weight: 600; color: #334155; border-bottom: 1px solid #f1f5f9; }
+        .rank-table tr.active-rank td { background-color: #f0fdf4; border-color: #86efac; }
+        
+        .level-badge { background: #1e293b; color: white; padding: 6px 14px; border-radius: 50px; font-size: 0.75rem; font-weight: bold; letter-spacing: 0.5px;}
+        .poin-badge { background: #e0e7ff; color: #4f46e5; padding: 6px 12px; border-radius: 8px; font-weight: 800; font-size: 0.8rem;}
     </style>
 </head>
 <body>
 
-    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom sticky-top py-2">
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom sticky-top">
         <div class="container-fluid px-4">
-            <a class="navbar-brand fw-bold d-flex align-items-center" href="siswa.php">
-                <span class="fs-5 tracking-wide">🎓 LMS SMKN 1 Wongsorejo</span>
+            <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="siswa.php">
+                <i class="bi bi-mortarboard-fill fs-4"></i> LMS Wongsorejo
             </a>
-            
-            <div class="d-flex align-items-center gap-3">
-                <div class="text-end text-white d-none d-md-block">
-                    <h6 class="mb-0 fw-bold small text-nowrap" style="font-size: 1.25rem"><?= htmlspecialchars($data_siswa['Nama'] ?? 'Siswa') ?></h6>
-                    <small class="text-white-50 text-uppercase d-block" style="font-size: 0.65rem; letter-spacing: 0.5px;"><?= htmlspecialchars($data_siswa['Kelas'] ?? '') ?></small>
-                </div>
-                <div class="rounded-circle bg-white p-0.5 shadow-sm border border-2 border-white border-opacity-20">
-                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=60" alt="Avatar" class="rounded-circle" style="width: 35px; height: 35px; object-fit: cover;">
+            <div class="d-none d-lg-flex align-items-center gap-3">
+                <div class="text-end text-white">
+                    <h6 class="mb-0 fw-bold small text-nowrap" style="font-size: 1.1rem"><?= htmlspecialchars($nama_lengkap) ?></h6>
+                    <span class="badge bg-white bg-opacity-25 rounded-pill mt-1"><i class="bi bi-building me-1"></i><?= htmlspecialchars($kelas_siswa) ?></span>
                 </div>
             </div>
         </div>
     </nav>
 
-    <div class="container-fluid px-0">
+    <div class="container-fluid px-0 flex-grow-1">
         <div class="row g-0">
-            
-            <nav class="col-md-3 col-lg-2 d-md-block sidebar">
-                <div class="position-sticky">
+            <nav class="col-md-3 col-lg-2 d-none d-md-block sidebar">
+                <div class="position-sticky top-0">
+                    <div class="text-muted small fw-bold mb-3 px-3 uppercase" style="letter-spacing: 1px;">MENU AKADEMIK</div>
                     <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link" href="siswa.php">
-                                <i class="bi bi-house-door me-2"></i>Dashboard
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="tugas.php">
-                                <i class="bi bi-book me-2"></i>Mata Pelajaran
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="kalender.php">
-                                <i class="bi bi-calendar-event me-2"></i>Jadwal
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link active" href="gamifikasi.php">
-                                <i class="bi bi-trophy me-2"></i>Gamifikasi
-                            </a>
-                        </li>
+                        <li class="nav-item"><a class="nav-link" href="siswa.php"><i class="bi bi-grid-1x2-fill me-3 fs-5 align-middle"></i> Dashboard</a></li>
+                        <li class="nav-item"><a class="nav-link" href="kalender.php"><i class="bi bi-calendar2-week-fill me-3 fs-5 align-middle"></i> Jadwal & Agenda</a></li>
+                        <li class="nav-item mt-4 mb-2"><div class="text-muted small fw-bold px-3 uppercase" style="letter-spacing: 1px;">PRESTASI</div></li>
+                        <li class="nav-item"><a class="nav-link active text-warning" href="gamifikasi.php"><i class="bi bi-trophy-fill me-3 fs-5 align-middle"></i> Gamifikasi</a></li>
                     </ul>
                 </div>
             </nav>
 
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4">
-                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
-                    <h1 class="h2 fw-bold text-dark">Pusat Gamifikasi</h1>
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-4 py-4 pb-5">
+                
+                <div class="breadcrumb-modern">
+                    <i class="bi bi-house-door-fill me-1"></i> <a href="siswa.php">Dashboard</a> <i class="bi bi-chevron-right mx-2 text-muted" style="font-size: 0.7rem;"></i> Pusat Gamifikasi
                 </div>
 
-                <div class="card bg-primary text-white mb-4">
-                    <div class="card-body p-4">
-                        <div class="row align-items-center">
-                            <div class="col-md-8">
-                                <h3 class="fw-bold mb-1">Kumpulkan Poin, Jadilah Juara!</h3>
-                                <p class="mb-4 text-white-50">Selesaikan tugas tepat waktu dan raih skor kuis tertinggi untuk mendapatkan XP ekstra.</p>
-                                <div class="d-flex align-items-center gap-4">
-                                    <div>
-                                        <small class="d-block text-white-50">TOTAL POIN ANDA</small>
-                                        <span class="fs-3 fw-bold"><i class="bi bi-lightning-charge-fill text-warning"></i> 350 XP</span>
-                                    </div>
-                                    <div>
-                                        <small class="d-block text-white-50">PERINGKAT SAAT INI</small>
-                                        <span class="fs-3 fw-bold"><i class="bi bi-award-fill text-danger"></i> #4</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4 text-md-end mt-3 mt-md-0">
-                                <div class="mb-2 small d-flex justify-content-between">
-                                    <span class="text-white-50">Progress Level 3</span>
-                                    <span class="fw-bold text-warning">70%</span>
-                                </div>
-                                <div class="progress">
-                                    <div class="progress-bar" role="progressbar" style="width: 70%"></div>
-                                </div>
-                            </div>
-                        </div>
+                <div class="hero-banner">
+                    <div class="position-relative z-1">
+                        <h2 class="fw-bold mb-2"><i class="bi bi-controller text-warning me-2"></i> Sistem Gamifikasi LMS</h2>
+                        <p class="mb-0 text-white-50" style="max-width: 700px; line-height: 1.6;">
+                            Kumpulkan <strong>Experience Points (XP)</strong> sebanyak mungkin dari aktivitas belajarmu! XP yang terkumpul akan meningkatkan Level-mu dan membuka Gelar Akademik eksklusif yang akan dipamerkan di Papan Peringkat Kelas.
+                        </p>
                     </div>
                 </div>
 
                 <div class="row g-4">
-                    <div class="col-md-6">
-                        <div class="card p-3">
-                            <div class="card-body">
-                                <h5 class="card-title mb-4"><i class="bi bi-bar-chart-line-fill text-danger me-2"></i>Papan Peringkat (Top 5)</h5>
-                                <div class="list-group list-group-flush">
-                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                        <div class="d-flex align-items-center gap-3">
-                                            <span class="fw-bold text-mjuted fs-5">1</span>
-                                            <div class="fw-bold text-dark">Ahmad Fauzi</div>
+                    <!-- KOLOM 1: ATURAN POIN -->
+                    <div class="col-lg-5">
+                        <div class="master-card">
+                            <div class="master-card-header">
+                                <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-stars text-warning me-2"></i> Cara Mendapatkan XP</h5>
+                            </div>
+                            <div class="card-body p-4">
+                                <?php 
+                                $i = 0;
+                                while($rule = mysqli_fetch_assoc($query_rules)): 
+                                    $icon = $icons[$i % count($icons)];
+                                    $color = $colors[$i % count($colors)];
+                                    $judul_aktivitas = htmlspecialchars($rule['JenisAktivitas']);
+                                    $deskripsi = isset($desc_map[$judul_aktivitas]) ? $desc_map[$judul_aktivitas] : "Aktivitas belajar positif.";
+                                ?>
+                                <div class="rule-card border-<?= $color ?>">
+                                    <div class="p-3 d-flex align-items-center">
+                                        <div class="icon-circle bg-<?= $color ?> bg-opacity-10 text-<?= $color ?> me-3 flex-shrink-0">
+                                            <i class="bi <?= $icon ?>"></i>
                                         </div>
-                                        <span class="fw-bold text-muted">520 XP</span>
-                                    </div>
-                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                        <div class="d-flex align-items-center gap-3">
-                                            <span class="fw-bold text-muted fs-5">2</span>
-                                            <div class="fw-bold text-dark">Siti Aminah</div>
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                                <h6 class="fw-bold mb-0 text-dark"><?= $judul_aktivitas ?></h6>
+                                                <span class="badge bg-<?= $color ?> bg-opacity-10 text-<?= $color ?> border border-<?= $color ?>-subtle rounded-pill">
+                                                    <?= (stripos($judul_aktivitas, 'Nilai') !== false) ? 'Sesuai Skor' : '+' . $rule['BesaranPoin'] . ' XP' ?>
+                                                </span>
+                                            </div>
+                                            <p class="text-muted small mb-0 lh-sm"><?= $deskripsi ?></p>
                                         </div>
-                                        <span class="fw-bold text-muted">480 XP</span>
                                     </div>
-                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                        <div class="d-flex align-items-center gap-3">
-                                            <span class="fw-bold text-muted fs-5">3</span>
-                                            <div class="fw-bold text-dark">Budi Santoso</div>
-                                        </div>
-                                        <span class="fw-bold text-muted">410 XP</span>
-                                    </div>
-                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3 bg-light rounded">
-                                        <div class="d-flex align-items-center gap-3">
-                                            <span class="fw-bold text-danger fs-5">4</span>
-                                            <div class="fw-bold text-danger">Risma Setiyo M (Kamu)</div>
-                                        </div>
-                                        <span class="fw-bold text-danger">350 XP</span>
-                                    </div>
-                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                        <div class="d-flex align-items-center gap-3">
-                                            <span class="fw-bold text-muted fs-5">5</span>
-                                            <div class="fw-bold text-dark">Dewi Lestari</div>
-                                        </div>
-                                        <span class="fw-bold text-muted">320 XP</span>
-                                    </div>
+                                </div>
+                                <?php $i++; endwhile; ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- KOLOM 2: PAPAN LEVEL -->
+                    <div class="col-lg-7">
+                        <div class="master-card">
+                            <div class="master-card-header d-flex justify-content-between align-items-center">
+                                <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-ladder text-success me-2"></i> Papan Jenjang Level</h5>
+                                <span class="badge bg-light text-dark border shadow-sm">Poinmu: <?= number_format($poin_siswa, 0, ',', '.') ?> XP</span>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table rank-table mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th class="text-center" width="15%">Level</th>
+                                                <th width="55%">Gelar Akademik</th>
+                                                <th class="text-end pe-4" width="30%">Syarat Poin</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php 
+                                            $baris = 0;
+                                            $batas_atas = -1;
+                                            // Array ranks diubah ke array biasa agar bisa melihat baris selanjutnya
+                                            $all_ranks = [];
+                                            while($r = mysqli_fetch_assoc($query_ranks)){ $all_ranks[] = $r; }
+                                            
+                                            for ($j=0; $j < count($all_ranks); $j++) { 
+                                                $rank = $all_ranks[$j];
+                                                $badge = $badges[$baris % count($badges)];
+                                                
+                                                $batas_bawah = $rank['BatasPoin'];
+                                                $batas_atas = isset($all_ranks[$j+1]) ? $all_ranks[$j+1]['BatasPoin'] : 9999999;
+                                                
+                                                // Tandai hijau jika XP siswa berada di rentang level ini
+                                                $is_active = ($poin_siswa >= $batas_bawah && $poin_siswa < $batas_atas) ? 'active-rank' : '';
+                                            ?>
+                                            <tr class="<?= $is_active ?>">
+                                                <td class="text-center">
+                                                    <span class="level-badge <?= $is_active ? 'bg-success text-white shadow-sm' : '' ?>">LVL <?= $rank['LevelAngka'] ?></span>
+                                                </td>
+                                                <td>
+                                                    <span class="fs-5 me-2"><?= $badge ?></span> 
+                                                    <span class="<?= $is_active ? 'fw-bold text-success' : 'fw-semibold text-dark' ?>"><?= htmlspecialchars($rank['Gelar']) ?></span>
+                                                    <?php if($is_active) echo '<span class="badge bg-success ms-2" style="font-size:0.6rem;">Posisi-mu</span>'; ?>
+                                                </td>
+                                                <td class="text-end pe-4">
+                                                    <span class="poin-badge <?= $is_active ? 'bg-success bg-opacity-10 text-success' : '' ?>"><i class="bi bi-gem me-1"></i> <?= number_format($rank['BatasPoin'], 0, ',', '.') ?> XP</span>
+                                                </td>
+                                            </tr>
+                                            <?php $baris++; } ?>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="col-md-6">
-                        <div class="card p-3">
-                            <div class="card-body">
-                                <h5 class="card-title mb-4"><i class="bi bi-clock-history text-danger me-2"></i>Aktivitas Riwayat Poin</h5>
-                                <div class="list-group list-group-flush">
-                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                        <div>
-                                            <h6 class="mb-0 small fw-bold">Bonus Kilat</h6>
-                                            <small class="text-muted">Tugas Jurnal Umum (&lt; 24 jam)</small>
-                                        </div>
-                                        <span class="point-badge">+50 XP</span>
-                                    </div>
-                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                        <div>
-                                            <h6 class="mb-0 small fw-bold">Nilai Tugas</h6>
-                                            <small class="text-muted">Persamaan Dasar Akuntansi</small>
-                                        </div>
-                                        <span class="point-badge">+80 XP</span>
-                                    </div>
-                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                        <div>
-                                            <h6 class="mb-0 small fw-bold">Baca Materi</h6>
-                                            <small class="text-muted">Konsep Debit Kredit</small>
-                                        </div>
-                                        <span class="point-badge">+20 XP</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
-
             </main>
         </div>
     </div>
-
+    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
