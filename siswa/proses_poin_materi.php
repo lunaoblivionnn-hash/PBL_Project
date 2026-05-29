@@ -2,45 +2,44 @@
 session_start();
 require '../login/koneksi.php';
 
-if(!isset($_SESSION['role']) || $_SESSION['role'] != 'siswa' || !isset($_POST['id_materi'])){
-    exit("0");
+// Pastikan respon berupa JSON agar Javascript bisa membacanya dengan rapi
+header('Content-Type: application/json');
+
+if(!isset($_SESSION['role']) || $_SESSION['role'] != 'siswa'){
+    echo json_encode(['status' => 'error', 'pesan' => 'Akses ditolak']); exit;
 }
 
 $id_user = $_SESSION['IDUser'];
+// Hapus kata 'materi_' untuk mendapatkan ID asli (contoh: M0001)
+$id_materi = mysqli_real_escape_string($koneksi, str_replace('materi_', '', $_POST['id_materi']));
+
 $q_siswa = mysqli_query($koneksi, "SELECT IDSiswa FROM siswa WHERE IDUser='$id_user'");
-$id_siswa = mysqli_fetch_assoc($q_siswa)['IDSiswa'];
+$id_siswa = mysqli_fetch_assoc($q_siswa)['IDSiswa'] ?? '';
 
-// Ambil Aturan Poin Membaca Materi (A002) dari master_aturan_poin
-$q_aturan = mysqli_query($koneksi, "SELECT Poin FROM master_aturan_poin WHERE IDAturan = 'A002'");
-$poin_materi = mysqli_fetch_assoc($q_aturan)['Poin'] ?? 20; // Fallback 20 XP
+// CEK ANTI-SPAM: Apakah poin materi ini sudah pernah diklaim siswa ini?
+// (Kita gunakan IDPengumpulan untuk menumpang menyimpan IDMateri sebagai penanda unik)
+$q_cek = mysqli_query($koneksi, "SELECT IDRiwayat FROM riwayat_poin WHERE IDSiswa='$id_siswa' AND IDPengumpulan='$id_materi'");
 
-// 1. Update total poin di tabel gamifikasi
-$cek_gami = mysqli_query($koneksi, "SELECT IDGamifikasi FROM gamifikasi WHERE IDSiswa = '$id_siswa'");
-if(mysqli_num_rows($cek_gami) > 0){
-    mysqli_query($koneksi, "UPDATE gamifikasi SET TotalPoint = TotalPoint + $poin_materi WHERE IDSiswa = '$id_siswa'");
+if(mysqli_num_rows($q_cek) > 0) {
+    // Jika sudah pernah, hentikan proses (Mencegah eksploitasi klik berkali-kali)
+    echo json_encode(['status' => 'sudah_klaim']); exit;
+}
+
+// Beri poin (Misal 5 XP untuk membaca materi)
+$poin_materi = 5; 
+$id_aturan = "AT006"; // Sesuaikan dengan ID Aturan "Membaca Materi" di excelmu jika ada
+
+// 1. Update Gamifikasi Siswa
+$q_gami = mysqli_query($koneksi, "SELECT IDGamifikasi FROM gamifikasi WHERE IDSiswa='$id_siswa'");
+if(mysqli_num_rows($q_gami) > 0) {
+    mysqli_query($koneksi, "UPDATE gamifikasi SET TotalPoint = TotalPoint + $poin_materi WHERE IDSiswa='$id_siswa'");
 } else {
-    $idg_baru = "G" . str_pad(rand(100, 9999), 4, "0", STR_PAD_LEFT);
-    mysqli_query($koneksi, "INSERT INTO gamifikasi (IDGamifikasi, IDSiswa, IDLevel, TotalPoint) VALUES ('$idg_baru', '$id_siswa', 'L001', $poin_materi)");
+    $idg = "G" . str_pad(rand(100, 9999), 4, "0", STR_PAD_LEFT);
+    mysqli_query($koneksi, "INSERT INTO gamifikasi (IDGamifikasi, IDSiswa, IDLevel, TotalPoint) VALUES ('$idg', '$id_siswa', 'LV001', $poin_materi)");
 }
 
-// 2. Masukkan ke riwayat_poin secara dinamis
-$columns_riwayat = [];
-$res_cols = mysqli_query($koneksi, "SHOW COLUMNS FROM riwayat_poin");
-while($c = mysqli_fetch_assoc($res_cols)) { $columns_riwayat[] = $c['Field']; }
+// 2. Catat Riwayat Poin
+mysqli_query($koneksi, "INSERT INTO riwayat_poin (IDSiswa, IDAturan, IDPengumpulan, TanggalWaktu) VALUES ('$id_siswa', '$id_aturan', '$id_materi', NOW())");
 
-$fields = []; $vals = [];
-if(in_array('IDRiwayat', $columns_riwayat)) { 
-    $idr = "R" . str_pad(rand(1000, 99999), 5, "0", STR_PAD_LEFT);
-    $fields[] = 'IDRiwayat'; $vals[] = "'$idr'"; 
-}
-if(in_array('IDSiswa', $columns_riwayat)) { $fields[] = 'IDSiswa'; $vals[] = "'$id_siswa'"; }
-if(in_array('IDAturan', $columns_riwayat)) { $fields[] = 'IDAturan'; $vals[] = "'A002'"; }
-if(in_array('IDPengumpulan', $columns_riwayat)) { $fields[] = 'IDPengumpulan'; $vals[] = "NULL"; } // NULL karena bukan tugas
-if(in_array('Poin', $columns_riwayat)) { $fields[] = 'Poin'; $vals[] = "$poin_materi"; }
-if(in_array('Tanggal', $columns_riwayat)) { $fields[] = 'Tanggal'; $vals[] = "NOW()"; }
-
-mysqli_query($koneksi, "INSERT INTO riwayat_poin (" . implode(',', $fields) . ") VALUES (" . implode(',', $vals) . ")");
-
-// Kembalikan angka poin ke AJAX JavaScript agar dibaca real-time oleh SweetAlert
-echo $poin_materi;
+echo json_encode(['status' => 'sukses', 'poin' => $poin_materi]);
 ?>
