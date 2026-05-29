@@ -163,8 +163,15 @@ while($t = mysqli_fetch_assoc($q_topik_all)) { $daftar_topik[] = $t; }
                             while($st = mysqli_fetch_assoc($q_st)): ?>
                                 <a href="#detailTugas<?= $st['IDTugas'] ?>" class="sidebar-subitem" onclick="bukaSectionUtama('<?= $id_tp ?>', '#detailTugas<?= $st['IDTugas'] ?>')"><i class="bi bi-journal-check text-success me-2"></i><?= htmlspecialchars($st['Judul']) ?></a>
                             <?php endwhile; ?>
+
+                            <?php 
+                            // Tarik daftar kuis untuk sidebar
+                            $q_sq = mysqli_query($koneksi, "SELECT IDKuis, Judul FROM kuis WHERE IDMapel='$id_mapel' AND IDTopik='$id_tp'");
+                            while($sq = mysqli_fetch_assoc($q_sq)): ?>
+                                <a href="#detailKuis<?= $sq['IDKuis'] ?>" class="sidebar-subitem" onclick="bukaSectionUtama('<?= $id_tp ?>', '#detailKuis<?= $sq['IDKuis'] ?>')"><i class="bi bi-patch-question-fill text-warning me-2"></i><?= htmlspecialchars($sq['Judul']) ?></a>
+                            <?php endwhile; ?>
                             
-                            <?php if(mysqli_num_rows($q_sm) == 0 && mysqli_num_rows($q_st) == 0): ?>
+                            <?php if(mysqli_num_rows($q_sm) == 0 && mysqli_num_rows($q_st) == 0 && mysqli_num_rows($q_sq) == 0): ?>
                                 <div class="sidebar-subitem fst-italic text-muted" style="pointer-events: none;">Belum ada konten</div>
                             <?php endif; ?>
                         </div>
@@ -343,6 +350,61 @@ while($t = mysqli_fetch_assoc($q_topik_all)) { $daftar_topik[] = $t; }
                                 </div>
                             </div>
                         <?php endwhile; ?>
+                        <?php
+                        // RENDER KONTEN KUIS 
+                        $q_kuis = mysqli_query($koneksi, "SELECT * FROM kuis WHERE IDMapel='$id_mapel' AND IDTopik='$id_topik'");
+                        while($kq = mysqli_fetch_assoc($q_kuis)): $ada_konten = true;
+                        ?>
+                            <div class="resource-item" data-bs-toggle="collapse" data-bs-target="#detailKuis<?= $kq['IDKuis'] ?>">
+                                <div class="icon-box bg-warning bg-opacity-10 text-warning"><i class="bi bi-patch-question-fill"></i></div>
+                                <div class="flex-grow-1">
+                                    <div class="fw-bold text-dark mb-1"><?= htmlspecialchars($kq['Judul']) ?></div>
+                                    <div class="small text-muted"><i class="bi bi-clock me-1"></i> Dibuat: <?= date('d M Y', strtotime($kq['TanggalDibuat'])) ?></div>
+                                </div>
+                                <i class="bi bi-chevron-down text-muted"></i>
+                            </div>
+
+                            <div class="collapse" id="detailKuis<?= $kq['IDKuis'] ?>">
+                                <div class="detail-collapse-body border-start border-4 border-warning" style="border-left-color: #ffc107 !important;">
+                                    <h6 class="fw-bold text-dark mb-2">Deskripsi Kuis:</h6>
+                                    <p class="text-secondary small mb-3">
+                                        <?= !empty($kq['Deskripsi']) ? nl2br(htmlspecialchars($kq['Deskripsi'])) : '<i>Tidak ada deskripsi untuk ujian ini.</i>' ?>
+                                    </p>
+                                    
+                                    <div class="row g-2 mb-4">
+                                        <div class="col-md-6">
+                                            <div class="border rounded p-2 small"><i class="bi bi-hourglass-split text-warning me-2"></i>Durasi: <strong class="text-dark"><?= $kq['DurasiMenit'] ?? 60 ?> Menit</strong></div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="border rounded p-2 small"><i class="bi bi-exclamation-circle text-danger me-2"></i>Tenggat: <strong class="text-danger"><?= date('d M Y, H:i', strtotime($kq['Deadline'] ?? 'now')) ?></strong></div>
+                                        </div>
+                                    </div>
+
+                                    <?php if($kq['Status'] == 'Published'): ?>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div class="small fw-bold text-success"><i class="bi bi-record-circle-fill me-1"></i> Ujian Sedang Berlangsung</div>
+                                        <button class="btn btn-sm btn-outline-danger fw-bold px-4" onclick="if(confirm('Yakin ingin menutup ujian ini secara paksa? Siswa tidak akan bisa mengerjakan lagi.')) window.location='akhiri_kuis.php?id=<?= $kq['IDKuis'] ?>&mapel=<?= $id_mapel ?>&kelas=<?= urlencode($kelas) ?>';">
+                                            <i class="bi bi-stop-circle-fill me-1"></i> Akhiri Ujian
+                                        </button>
+                                    </div>
+                                    <?php else: ?>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div class="small fw-bold text-danger"><i class="bi bi-lock-fill me-1"></i> Ujian Telah Ditutup</div>
+                                    </div>
+                                    <?php endif; ?>
+
+                                    <div class="d-flex justify-content-between align-items-center p-3 bg-warning bg-opacity-10 border border-warning border-opacity-25 rounded-3">
+                                        <div>
+                                            <div class="fw-bold text-dark mb-1"><i class="bi bi-bar-chart-fill text-warning me-2"></i>Laporan & Nilai Siswa</div>
+                                            <div class="small text-muted" style="font-size: 0.8rem;">Lihat statistik jawaban dan hasil ujian.</div>
+                                        </div>
+                                        <a href="hasil_kuis.php?id_kuis=<?= $kq['IDKuis'] ?>&kelas=<?= urlencode($kelas) ?>" class="btn btn-warning text-dark fw-bold px-4 rounded-pill shadow-sm">
+                                            Buka Laporan Ujian <i class="bi bi-arrow-right-short ms-1 fs-5 align-middle"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endwhile; ?>
 
                         <?php if(!$ada_konten): ?>
                             <div class="text-center py-3">
@@ -385,9 +447,9 @@ while($t = mysqli_fetch_assoc($q_topik_all)) { $daftar_topik[] = $t; }
                         <button onclick="pindahModal('modalBuatTugas')" class="btn btn-outline-success text-start p-3 fw-bold rounded-3">
                             <i class="bi bi-journal-plus fs-4 me-3 align-middle"></i> Buat Penugasan Baru
                         </button>
-                        <button class="btn btn-outline-warning text-dark text-start p-3 fw-bold rounded-3" onclick="alert('Sabar ya, fitur Quiz sedang dalam perakitan!')">
+                        <a id="btnBuatQuiz" href="#" class="btn btn-outline-warning text-dark text-start p-3 fw-bold rounded-3 text-decoration-none d-block">
                             <i class="bi bi-patch-question fs-4 me-3 align-middle"></i> Buat Quiz / Ujian
-                        </button>
+                        </a>
                     </div>
                 </div>
             </div>
@@ -777,6 +839,17 @@ while($t = mysqli_fetch_assoc($q_topik_all)) { $daftar_topik[] = $t; }
             b.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Menyimpan...';
             b.disabled = true;
         });
+
+        function bukaModalAktivitas(idTopik, namaTopik) { 
+            document.getElementById('labelTargetTopik').innerText = namaTopik; 
+            document.getElementById('inputTopikMateri').value = idTopik; 
+            document.getElementById('inputTopikTugas').value = idTopik; 
+            
+            // Tambahkan link dinamis ke tombol Buat Quiz
+            document.getElementById('btnBuatQuiz').href = `buat_quiz.php?id_mapel=<?= urlencode($id_mapel) ?>&kelas=<?= urlencode($kelas) ?>&id_topik=${idTopik}`;
+            
+            new bootstrap.Modal(document.getElementById('modalPilihAktivitas')).show(); 
+        }
     </script>
     <?php if(isset($_GET['pesan']) || isset($_GET['status'])): ?>
     <script>Swal.fire({ title: 'Berhasil!', icon: 'success', confirmButtonColor: '#4f46e5', timer: 2000, showConfirmButton: false }); window.history.replaceState(null, null, window.location.pathname + "?id_mapel=<?= urlencode($id_mapel) ?>&kelas=<?= urlencode($kelas) ?>");</script>
