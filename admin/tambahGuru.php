@@ -199,7 +199,7 @@
                                             <h6 class="fw-bold mb-2 text-dark">Penting! Panduan & Aturan Upload CSV Guru:</h6>
                                             <ul class="mb-0 small text-dark" style="padding-left: 1.2rem; line-height: 1.6;">
                                                 <li><strong>Format File Wajib .CSV:</strong> Saat menyimpan di Excel (Save As), pastikan memilih format <b>CSV (Comma delimited)</b>. Ekstensi <i>.xlsx</i> akan ditolak.</li>
-                                                <li><strong>Kolom ke-4 (Akses Mengajar) Bersifat Opsional:</strong> Boleh dikosongkan jika guru belum memiliki jadwal. Jika ingin diisi, formatnya: <code>Kelas - Mata Pelajaran</code>. Pisahkan dengan koma jika lebih dari satu (Contoh: <i>X AKL 1 - Matematika, XI AKL 2 - Bahasa Inggris</i>).</li>
+                                                <li><strong>Kolom ke-4 (kelas - mapel) Bersifat Opsional:</strong> Boleh dikosongkan jika guru belum memiliki jadwal. Jika ingin diisi, formatnya: <code>Kelas - Mata Pelajaran</code>. Pisahkan dengan koma jika lebih dari satu (Contoh: <i>X AKL 1 - Matematika, XI AKL 2 - Bahasa Inggris</i>), mapel tersebut harus sudah dibuat dan ada di sistem ini.</li>
                                                 <li><strong>Hindari Username/NIP Ganda:</strong> Pastikan NIP yang ingin di-upload belum pernah didaftarkan ke dalam sistem sebelumnya.</li>
                                             </ul>
                                         </div>
