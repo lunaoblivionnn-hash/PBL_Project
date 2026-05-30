@@ -197,11 +197,25 @@
 
                     <div class="tab-pane fade" id="csv" role="tabpanel">
                         <div class="card border-0 shadow-sm rounded-3">
-                            <div class="card-header bg-white border-bottom py-3">
+                        <div class="card-header bg-white border-bottom py-3">
                                 <h6 class="mb-0 fw-bold text-danger">Upload Massal Siswa via CSV</h6>
                             </div>
                             <div class="card-body p-4 p-md-5">
                                 
+                                <div class="alert alert-warning border-warning border-opacity-50 shadow-sm mb-4" role="alert" style="background-color: #fffbeb;">
+                                    <div class="d-flex">
+                                        <i class="bi bi-exclamation-triangle-fill fs-2 text-warning me-3 mt-1"></i>
+                                        <div>
+                                            <h6 class="fw-bold mb-2 text-dark">Penting! Perhatikan 3 Poin Ini Sebelum Upload:</h6>
+                                            <ul class="mb-0 small text-dark" style="padding-left: 1.2rem; line-height: 1.6;">
+                                                <li><strong>Format file wajib .CSV:</strong> Saat menyimpan di Excel (Save As), pastikan memilih format <b>CSV (Comma delimited)</b>. Ekstensi <i>.xlsx</i> akan ditolak oleh sistem.</li>
+                                                <li><strong>Jangan menukar urutan kolom:</strong> Anda diizinkan mengubah teks judul atau menebalkannya, namun jangan pernah memindah-mindah posisi urutan kolom aslinya.</li>
+                                                <li><strong>Hindari username/NISN ganda:</strong> Pastikan Username (NISN) yang ingin di-upload belum pernah didaftarkan ke dalam sistem sebelumnya.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div class="mb-4">
                                     <label class="form-label fw-bold text-secondary small">File Template CSV</label>
                                     <div class="p-3 bg-light rounded border border-dashed">
@@ -213,16 +227,27 @@
                                 </div>
 
                                 <form action="proses_upload_siswa.php" method="POST" enctype="multipart/form-data">
+                                    <div class="mb-4 bg-light p-3 rounded border">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" name="force_password_change_csv" id="forcePassCSV" value="1" checked>
+                                            <label class="form-check-label fw-bold text-danger" for="forcePassCSV">
+                                                Paksa perubahan kata sandi untuk semua siswa
+                                            </label>
+                                            <div class="form-text mt-0">Seluruh siswa di dalam file CSV ini akan diminta mengganti password saat pertama kali login.</div>
+                                        </div>
+                                    </div>
+                                    
                                     <div class="mb-4">
                                         <label class="form-label fw-bold text-secondary small">Upload File <span class="text-danger">*</span></label>
                                         <div class="dropzone-box text-center p-5 position-relative">
-                                        <i class="bi bi-cloud-arrow-up text-muted" style="font-size: 3.5rem;"></i>
-                                        <p class="mt-3 mb-2 fw-semibold text-secondary">Pilih atau letakkan file CSV Anda di sini</p>
-                                        <p class="text-muted small mb-3">Maksimal 10 MB. Berekstensi .csv</p>
-                                        <div id="namaFilePilihan" class="text-primary fw-bold mt-2"></div>
-                                        <input type="file" id="fileUploadInput" name="file_csv" class="form-control position-absolute top-0 start-0 w-100 h-100 opacity-0" accept=".csv" required style="cursor: pointer;">
+                                            <i class="bi bi-cloud-arrow-up text-muted" style="font-size: 3.5rem;"></i>
+                                            <p class="mt-3 mb-2 fw-semibold text-secondary">Pilih atau letakkan file CSV Anda di sini</p>
+                                            <p class="text-muted small mb-3">Maksimal 10 MB. Berekstensi .csv</p>
+                                            <div id="namaFilePilihan" class="text-primary fw-bold mt-2"></div>
+                                            <input type="file" id="fileUploadInput" name="file_csv" class="form-control position-absolute top-0 start-0 w-100 h-100 opacity-0" accept=".csv" required style="cursor: pointer;">
+                                        </div>
                                     </div>
-                                    </div>
+
 
                                     <div class="d-flex justify-content-end">
                                         <button type="submit" name="upload_csv" class="btn btn-lms-blue px-4 py-2 fw-bold">
