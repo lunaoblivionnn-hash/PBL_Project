@@ -9,6 +9,9 @@ if ($_SESSION['role'] != 'admin') {
 
 if (isset($_POST['upload_csv'])) {
     $file = $_FILES['file_csv']['tmp_name'];
+    
+    // TANGKAP STATUS WAJIB UBAH PASSWORD DARI CHECKBOX FORM
+    $wajib_ubah = isset($_POST['force_password_change_csv']) ? 1 : 0;
 
     // Daftar Kelas & Mapel yang SAH di sekolahmu (Sebagai acuan kebenaran)
     $master_kelas = ['X AKL 1', 'X AKL 2', 'XI AKL 1', 'XI AKL 2', 'XII AKL 1', 'XII AKL 2'];
@@ -29,7 +32,7 @@ if (isset($_POST['upload_csv'])) {
 
         while (($data = fgetcsv($handle, 1000, $delimiter)) !== FALSE) {
             $nip       = mysqli_real_escape_string($koneksi, trim($data[0])); 
-            $password  = empty(trim($data[1])) ? '123456' : mysqli_real_escape_string($koneksi, trim($data[1]));
+            $password  = empty(trim($data[1])) ? '' : mysqli_real_escape_string($koneksi, trim($data[1]));
             $nama      = mysqli_real_escape_string($koneksi, trim($data[2])); 
             $raw_mapel = trim($data[3]); 
             $email     = mysqli_real_escape_string($koneksi, trim($data[4]));
@@ -98,8 +101,8 @@ if (isset($_POST['upload_csv'])) {
                 $angka_guru++;
             }
 
-            // Eksekusi Simpan
-            $query_user = "INSERT INTO users (IDUser, Username, Password, Role, Status, WajibUbahPassword) VALUES ('$id_user', '$nip', '$password', 'guru', 'Aktif', 1)";
+            // Eksekusi Simpan dengan status $wajib_ubah
+            $query_user = "INSERT INTO users (IDUser, Username, Password, Role, Status, WajibUbahPassword) VALUES ('$id_user', '$nip', '$password', 'guru', 'Aktif', '$wajib_ubah')";
             if(mysqli_query($koneksi, $query_user)) {
                 $query_profil = "INSERT INTO guru (IDGuru, IDUser, NamaGuru, NIP_NUPTK, Email, NoTelp, MataPelajaran) VALUES ('$id_guru', '$id_user', '$nama', '$nip', '$email', '$notelp', '$json_mapel')";
                 mysqli_query($koneksi, $query_profil);
@@ -108,7 +111,7 @@ if (isset($_POST['upload_csv'])) {
         }
         fclose($handle);
 
-        // Lempar hasil ke URL (Contoh: status=info_upload&ok=5&fail=2)
+        // Lempar hasil ke URL
         header("Location: daftarGuru.php?status=info_upload&ok=$berhasil&fail=$gagal_format");
         exit;
     }
