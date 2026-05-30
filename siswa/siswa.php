@@ -224,7 +224,7 @@ $total_mapel = mysqli_num_rows($query_mapel);
         <div class="container-fluid px-4">
             <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="siswa.php">
                 <i class="bi bi-mortarboard-fill fs-4"></i>
-                <span class="tracking-wide">LMS Wongsorejo</span>
+                <span class="tracking-wide">LMS Akuntansi dan Keuangan Lembaga</span>
             </a>
             
             <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#mobileMenu">
