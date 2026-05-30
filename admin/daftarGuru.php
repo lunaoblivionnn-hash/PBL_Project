@@ -303,6 +303,14 @@ if(!empty($filter_mapel)) $url_query .= "&mapel=".urlencode($filter_mapel);
                 } else {
                     Swal.fire({ title: 'Upload Sukses!', text: `${ok} Data guru berhasil diupload tanpa ada kesalahan.`, icon: 'success', timer: 4000, showConfirmButton: false });
                 }
+            } else if(status === 'error_csv') {
+                Swal.fire({ 
+                    title: 'Upload Dibatalkan!', 
+                    html: `<div class="text-start small text-danger" style="line-height:1.6;">Data ditolak karena ada kesalahan pada file Excel Anda:<br><br><div class="bg-light p-2 border border-danger-subtle rounded text-dark"><?= isset($_SESSION['error_csv_guru']) ? $_SESSION['error_csv_guru'] : 'Terjadi kesalahan tidak diketahui.' ?></div><br>Mohon perbaiki file CSV Anda lalu upload ulang.</div>`, 
+                    icon: 'error', 
+                    confirmButtonColor: '#dc3545'
+                });
+                <?php unset($_SESSION['error_csv_guru']); // Bersihkan memori ?>
             }
             window.history.replaceState(null, null, window.location.pathname);
         </script>
