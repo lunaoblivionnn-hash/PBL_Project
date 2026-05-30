@@ -182,7 +182,7 @@ $query_siswa_baru = mysqli_query($koneksi, "SELECT SISWA.*, users.Status FROM SI
                                     <table class="table table-hover align-middle mb-0">
                                         <thead class="table-light">
                                             <tr>
-                                                <th class="ps-4">ID Siswa</th>
+                                                <th class="ps-4">NISN</th>
                                                 <th>Nama Lengkap</th>
                                                 <th>Kelas</th>
                                                 <th>Status Akun</th>
@@ -206,7 +206,7 @@ $query_siswa_baru = mysqli_query($koneksi, "SELECT SISWA.*, users.Status FROM SI
                                                     $status_badge = '<span class="badge bg-success bg-opacity-10 text-success border border-success">Aktif</span>';
                                                 }
 
-                                                $id_siswa = isset($row['IDSiswa']) ? $row['IDSiswa'] : '-';
+                                                $id_siswa = isset($row['NISN']) ? $row['NISN'] : '-';
                                                 $nama_siswa = isset($row['NamaSiswa']) ? $row['NamaSiswa'] : 'Tanpa Nama';
                                                 $kelas = isset($row['Kelas']) ? $row['Kelas'] : '-';
                                         ?>
