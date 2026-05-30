@@ -1,56 +1,32 @@
-﻿username;password;nama;kelas;email;notelp
-36255805;123456;Aditya Pratama;X AKL 1;aditya.p@gmail.com;81234567001
-;;;;;
-;;;;;
-;;;;;
-;;;;;
-;;;;;
-";;;;bunga.cl@gmail.com;081234567002";;;;;
-"36255807;123456;Cahyo purnomo;X AKL 1;cahyo.p@gmail.com;081234567003";;;;;
-"36255808;123456;Dewi Sartika;X AKL 1;dewi.s@gmail.com;081234567004";;;;;
-"36255809;123456;Eko prasetyo;X AKL 1;eko.p@gmail.com;081234567005";;;;;
-"36255810;123456;Fajri Ramadhan;X AKL 2;fajri.r@gmail.com;081234567006";;;;;
-"36255811;123456;Gita Gutawa;X AKL 2;gita.g@gmail.com;081234567007";;;;;
-"36255812;123456;Hendra Wijaya;X AKL 2;hendra.w@gmail.com;081234567008";;;;;
-"36255813;123456;Indah Permatasari;X AKL 2;indah.p@gmail.com;081234567009";;;;;
-"36255814;123456;Joko Susilo;X AKL 2;joko.s@gmail.com;081234567010";;;;;
-"36255815;123456;Kurniawan Dwi;XI AKL 1;kurniawan.d@gmail.com;081234567011";;;;;
-"36255816;123456;Lestari Putri;XI AKL 1;lestari.p@gmail.com;081234567012";;;;;
-"36255817;123456;Muhammad Rizky;XI AKL 1;m.rizky@gmail.com;081234567013";;;;;
-"36255818;123456;Nina Marlina;XI AKL 1;nina.m@gmail.com;081234567014";;;;;
-"36255819;123456;Oki Setiana;XI AKL 1;oki.s@gmail.com;081234567015";;;;;
-"36255820;123456;Putri Handayani;XI AKL 2;putri.h@gmail.com;081234567016";;;;;
-"36255821;123456;Qori Sandioriva;XI AKL 2;qori.s@gmail.com;081234567017";;;;;
-"36255822;123456;Rian D'Masiv;XI AKL 2;rian.d@gmail.com;081234567018";;;;;
-"36255823;123456;Siti Badriah;XI AKL 2;siti.b@gmail.com;081234567019";;;;;
-"36255824;123456;Taufik Hidayat;XI AKL 2;taufik.h@gmail.com;081234567020";;;;;
-"36255825;123456;Umar Bin Khattab;XII AKL 1;umar.b@gmail.com;081234567021";;;;;
-"36255826;123456;Vina Panduwinata;XII AKL 1;vina.p@gmail.com;081234567022";;;;;
-"36255827;123456;Wahyu Hidayat;XII AKL 1;wahyu.h@gmail.com;081234567023";;;;;
-"36255828;123456;Xena Warrior;XII AKL 1;xena.w@gmail.com;081234567024";;;;;
-"36255829;123456;Yusuf Mansur;XII AKL 1;yusuf.m@gmail.com;081234567025";;;;;
-"36255830;123456;Zaskia Adya Mecca;XII AKL 2;zaskia.m@gmail.com;081234567026";;;;;
-"36255831;123456;Andi Mallarangeng;XII AKL 2;andi.m@gmail.com;081234567027";;;;;
-"36255832;123456;Bambang Pamungkas;XII AKL 2;bambang.p@gmail.com;081234567028";;;;;
-"36255833;123456;Chandra Liow;XII AKL 2;chandra.l@gmail.com;081234567029";;;;;
-"36255834;123456;Deddy Corbuzier;XII AKL 2;deddy.c@gmail.com;081234567030";;;;;
-"36255835;123456;Ernest Prakasa;X AKL 1;ernest.p@gmail.com;081234567031";;;;;
-"36255836;123456;Fiersa Besari;X AKL 1;fiersa.b@gmail.com;081234567032";;;;;
-"36255837;123456;Giring Ganesha;X AKL 2;giring.g@gmail.com;081234567033";;;;;
-"36255838;123456;Hesti Purwadinata;X AKL 2;hesti.p@gmail.com;081234567034";;;;;
-"36255839;123456;Isyana Sarasvati;XI AKL 1;isyana.s@gmail.com;081234567035";;;;;
-"36255840;123456;Judika Sihotang;XI AKL 1;judika.s@gmail.com;081234567036";;;;;
-"36255841;123456;Kaka Slank;XI AKL 2;kaka.s@gmail.com;081234567037";;;;;
-"36255842;123456;Luna Maya;XI AKL 2;luna.m@gmail.com;081234567038";;;;;
-"36255843;123456;Maia Estianty;XII AKL 1;maia.e@gmail.com;081234567039";;;;;
-"36255844;123456;Najwa Shihab;XII AKL 1;najwa.s@gmail.com;081234567040";;;;;
-"36255845;123456;Once Mekel;XII AKL 2;once.m@gmail.com;081234567041";;;;;
-"36255846;123456;Pasha Ungu;X AKL 1;pasha.u@gmail.com;081234567042";;;;;
-"36255847;123456;Raisa Andriana;X AKL 2;raisa.a@gmail.com;081234567043";;;;;
-"36255848;123456;Sule Prikitiw;XI AKL 1;sule.p@gmail.com;081234567044";;;;;
-"36255849;123456;Tulus;XI AKL 2;tulus@gmail.com;081234567045";;;;;
-"36255850;123456;Ungu Band;XII AKL 1;ungu@gmail.com;081234567046";;;;;
-"36255851;123456;Vidi Aldiano;XII AKL 2;vidi.a@gmail.com;081234567047";;;;;
-"36255852;123456;Warkop DKI;X AKL 1;warkop@gmail.com;081234567048";;;;;
-"36255853;123456;Yura Yunita;XI AKL 1;yura.y@gmail.com;081234567049";;;;;
-"36255854;123456;Ziva Magnolya;XII AKL 2;ziva.m@gmail.com;081234567050";;;;;
+﻿username (NISN);password;nama lengkap;kelas;email (opsional);notelp (opsional)
+3625583020;123456;BUNGA HENDRYANDA RAMADHANI;XI AKL 1;bunga117@gmail.com;0812 3456 7001
+3625583021;123456;AHMAD ILZAM ZAUQI RAMADAN;XI AKL 1;ahmadilzam12@gmail.com;0813 3457 7002
+3625583022;123456;DEWI MAHIYATUL KHABIBAH;XI AKL 1;dewimahiya29@gmail.com;0813 3458 7003
+3625583023;123456;AFIFA NUR FITRIA;XI AKL 1;afifanur77@gmail.com;0814 3457 7004
+3625583024;123456;JUWITA SRI WAHYU NINGSIH;XI AKL 1;juwitaswn@gmail.com;0814 3458 7005
+3625583025;123456;RAIDO OCTAVIANDY;XI AKL 1;raido2006@gmail.com;
+3625583026;123456;RISMA SETIO MUHTAFIROH;XI AKL 1;rismasetyoa04@gmail.com;0815 3458 7007
+3625583027;123456;CAHAYA WULANDARI;XI AKL 1;cahayawulandari@gmail.com;0816 3457 7008
+3625583028;123456;MOCH RIZKI AGUNG;XI AKL 1;mochrizkiagung@gmail.com;0816 3458 7009
+3625583029;123456;SHINTA NURIA;XI AKL 1;;0817 3457 7010
+3625583030;123456;FASA UFA FIAUNILLA;XI AKL 1;;0817 3458 7011
+3625583031;123456;MOH FAUZI FIRDAUS;XI AKL 1;;0818 3457 7012
+3625583032;123456;ADAM MARCHELINO;XI AKL 1;marchelino02@gmail.com;0818 3458 7013
+3625583033;123456;YUDISTA APRILIO RAMI FIRMANSYA;XI AKL 1;yudista2007@gmail.com;
+3625583034;123456;AYU NANDHA RIZKIE;XI AKL 1;ayunandha@gmail.com;
+3625583035;123456;RIZKY TRI ANGGARA;XI AKL 1;;0820 3457 7016
+3625583036;123456;KHAIRAN ADIOKTA ARUN NUGRAHA;XI AKL 1;;0820 3458 7017
+3625583037;123456;WILDAN DAFFA AKMAL PUTRA;XI AKL 1;wildandaffaa@gmail.com;0821 3457 7018
+3625583038;123456;DELA KARTIKA;XI AKL 1;delakartikaa@gmail.com;0821 3458 7019
+3625583039;123456;ICHWAN AR RAFFY;XI AKL 1;ichwanara@gmail.com;0822 3457 7020
+3625583040;123456;HENDRA YUDHA PRATAMA;XI AKL 1;hendrayudhaa@gmail.com;0822 3458 7021
+3625583041;123456;FACHREZA HUDITAMA;XI AKL 1;fachrezahuditamaa@gmail.com;0823 3457 7022
+3625583042;123456;TAUFIQ HIDAYAT;XI AKL 1;taufiqhidayata@gmail.com;
+3625583043;123456;DIMAS TRI IBRAHUL GOZI;XI AKL 1;dimastria@gmail.com;0824 3457 7024
+3625583044;123456;MOHAMMAD SALIM;XI AKL 1;mohammadsalima@gmail.com;0824 3458 7025
+3625583045;123456;MUHAMMAD HASBIALLAH HABIBI;XI AKL 1;;
+3625583046;123456;MOCH RUSDI;XI AKL 1;mochrusdia@gmail.com;0825 3458 7027
+3625583047;123456;AYASKA FERNANDO;XI AKL 1;ayaskafernandoa@gmail.com;0826 3457 7028
+3625583048;123456;HAFIZH ALIF KURNIAWAN;XI AKL 1;hafizhalifa@gmail.com;0826 3458 7029
+3625583049;123456;GAPAY TALENTA;XI AKL 1;gapaytalentaa@gmail.com;0827 3457 7030
+3625583050;123456;ERIKO AFRIYANTO;XI AKL 1;erikoafriyantoa@gmail.com;0827 3458 7031
