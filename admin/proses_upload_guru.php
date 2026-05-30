@@ -2,90 +2,146 @@
 session_start();
 require '../login/koneksi.php';
 
-if ($_SESSION['role'] != 'admin') {
-    header("Location: ../login/login.php");
-    exit;
-}
+if ($_SESSION['role'] != 'admin') { header("Location: ../login/login.php"); exit; }
 
 if (isset($_POST['upload_csv'])) {
     $file = $_FILES['file_csv']['tmp_name'];
-    
-    // TANGKAP STATUS WAJIB UBAH PASSWORD DARI CHECKBOX FORM
     $wajib_ubah = isset($_POST['force_password_change_csv']) ? 1 : 0;
 
-    // Daftar Kelas & Mapel yang SAH di sekolahmu (Sebagai acuan kebenaran)
+    // =========================================================
+    // 1. AMBIL DAFTAR MAPEL ASLI DARI DATABASE
+    // =========================================================
+    $master_mapel = [];
+    $q_mapel = mysqli_query($koneksi, "SELECT DISTINCT NamaMapel FROM mapel");
+    if($q_mapel) {
+        while($row = mysqli_fetch_assoc($q_mapel)){
+            $master_mapel[] = trim($row['NamaMapel']);
+        }
+    }
+    
+    // Daftar Kelas (Sesuai dengan rumpun yang ada di LMS Wongsorejo)
     $master_kelas = ['X AKL 1', 'X AKL 2', 'XI AKL 1', 'XI AKL 2', 'XII AKL 1', 'XII AKL 2'];
-    $master_mapel = ['Akuntansi Dasar', 'Ekonomi Bisnis', 'Matematika', 'Bahasa Indonesia', 'Bahasa Inggris', 'Pendidikan Agama'];
 
-    // Buat versi huruf kecil semua untuk alat deteksi auto-correct
+    // Ubah semua ke huruf kecil untuk alat deteksi auto-correct (anti besar-kecil error)
     $lower_kelas = array_map('strtolower', $master_kelas);
     $lower_mapel = array_map('strtolower', $master_mapel);
-
-    $berhasil = 0;
-    $gagal_format = 0;
 
     if (($handle = fopen($file, "r")) !== FALSE) {
         $firstLine = fgets($handle); 
         $delimiter = (strpos($firstLine, ';') !== FALSE) ? ';' : ',';
         rewind($handle);
-        fgetcsv($handle, 1000, $delimiter); 
+        fgetcsv($handle, 1000, $delimiter); // Lewati judul kolom
 
+        $baris_excel = 2; 
+        $ada_error = false;
+        $pesan_error = [];
+        $data_valid = []; 
+        
+        // Alat pendeteksi NIP Ganda di dalam file Excel
+        $nips_di_csv = [];
+
+        // =========================================================
+        // PUTARAN 1: FASE SCANNING KETAT (CEK SEMUA ERROR)
+        // =========================================================
         while (($data = fgetcsv($handle, 1000, $delimiter)) !== FALSE) {
-            $nip       = mysqli_real_escape_string($koneksi, trim($data[0])); 
-            $password  = empty(trim($data[1])) ? '' : mysqli_real_escape_string($koneksi, trim($data[1]));
-            $nama      = mysqli_real_escape_string($koneksi, trim($data[2])); 
-            $raw_mapel = trim($data[3]); 
-            $email     = mysqli_real_escape_string($koneksi, trim($data[4]));
-            $notelp    = mysqli_real_escape_string($koneksi, trim($data[5]));
+            $nip       = str_replace(' ', '', trim($data[0] ?? '')); 
+            $password  = empty(trim($data[1] ?? '')) ? 'guru123' : trim($data[1]);
+            $nama      = trim($data[2] ?? ''); 
+            $raw_mapel = trim($data[3] ?? ''); 
+            $email     = trim($data[4] ?? '');
+            $notelp    = trim($data[5] ?? '');
 
-            if (empty($nip)) continue;
+            // Abaikan jika baris benar-benar kosong melompong
+            if (empty($nip) && empty($nama)) { $baris_excel++; continue; } 
 
-            // Set password default jika dikosongkan di Excel
-            if (empty($password)) $password = 'guru123';
-
-            $akses_guru = [];
-            $baris_ini_valid = true; // Anggap benar dulu
+            $error_baris_ini = [];
             
+            // CEK NIP KOSONG & GANDA
+            if (empty($nip)) {
+                $error_baris_ini[] = "NIP tidak boleh kosong";
+            } else {
+                // Cek apakah NIP ini ditulis lebih dari 1 kali di Excel ini
+                if (in_array($nip, $nips_di_csv)) {
+                    $error_baris_ini[] = "NIP '$nip' terdeteksi GANDA di dalam file CSV ini";
+                } else {
+                    $nips_di_csv[] = $nip; // Masukkan ke catatan untuk dicek baris berikutnya
+                }
+
+                // Cek apakah NIP ini sudah ada di Database
+                $cek_nip = mysqli_query($koneksi, "SELECT NIP_NUPTK FROM guru WHERE NIP_NUPTK = '".mysqli_real_escape_string($koneksi, $nip)."'");
+                if (mysqli_num_rows($cek_nip) > 0) {
+                    $error_baris_ini[] = "NIP '$nip' sudah terdaftar di sistem database";
+                }
+            }
+
+            // CEK FORMAT KELAS & MAPEL
+            $akses_guru = [];
             if (!empty($raw_mapel)) {
                 $items = explode(',', $raw_mapel);
                 foreach ($items as $item) {
                     $parts = explode('-', $item);
-                    
                     if (count($parts) == 2) {
                         $kelas_input = strtolower(trim($parts[0]));
                         $mapel_input = strtolower(trim($parts[1]));
                         
-                        // Cek apakah ketikan admin ada di daftar Master?
                         $idx_kelas = array_search($kelas_input, $lower_kelas);
                         $idx_mapel = array_search($mapel_input, $lower_mapel);
 
-                        // Jika Valid (Typo huruf kecil/besar dimaafkan)
+                        // Munculkan Error Typo / Tidak dikenali
+                        if ($idx_kelas === false) $error_baris_ini[] = "Kelas '".trim($parts[0])."' tidak valid";
+                        if ($idx_mapel === false) $error_baris_ini[] = "Mapel '".trim($parts[1])."' belum ditambahkan di database";
+
+                        // Jika aman, susun ke array Json
                         if ($idx_kelas !== false && $idx_mapel !== false) {
-                            $kelas_asli = $master_kelas[$idx_kelas]; // Ambil penulisan yang benar
+                            $kelas_asli = $master_kelas[$idx_kelas]; 
                             $mapel_asli = $master_mapel[$idx_mapel];
-                            
-                            if (!isset($akses_guru[$kelas_asli])) {
-                                $akses_guru[$kelas_asli] = [];
-                            }
+                            if (!isset($akses_guru[$kelas_asli])) $akses_guru[$kelas_asli] = [];
                             $akses_guru[$kelas_asli][] = $mapel_asli;
-                        } else {
-                            // Jika kelas/mapel ngawur (tidak terdaftar)
-                            $baris_ini_valid = false; 
                         }
                     } else {
-                        // Jika tidak ada tanda strip (-)
-                        $baris_ini_valid = false;
+                        $error_baris_ini[] = "Format Mengajar salah (Kurang tanda strip '-' pada '$item')";
                     }
                 }
             }
 
-            // Jika ada format ngawur di baris ini, lewati (jangan simpan ke DB), dan hitung sebagai gagal
-            if (!$baris_ini_valid && !empty($raw_mapel)) {
-                $gagal_format++;
-                continue; 
+            // REKAP ERROR PER BARIS
+            if (!empty($error_baris_ini)) {
+                $ada_error = true;
+                $pesan_error[] = "<b>Baris $baris_excel:</b> " . implode(" | ", $error_baris_ini);
+            } else {
+                // Jika 100% mulus tanpa 1 pun error, masukkan ke keranjang siap simpan
+                $data_valid[] = [
+                    'nip' => $nip, 'password' => $password, 'nama' => $nama,
+                    'akses' => $akses_guru, 'email' => $email, 'notelp' => $notelp
+                ];
             }
+            $baris_excel++;
+        }
+        fclose($handle);
 
-            $json_mapel = mysqli_real_escape_string($koneksi, json_encode($akses_guru));
+        // =========================================================
+        // JIKA ADA 1 SAJA ERROR: BLOKIR & TAMPILKAN LAPORAN
+        // =========================================================
+        if ($ada_error) {
+            // Tampilkan maksimal 12 error agar popup muat dan detail terlihat jelas
+            $gabungan_error = implode("<br><br>", array_slice($pesan_error, 0, 12));
+            if (count($pesan_error) > 12) $gabungan_error .= "<br><br><b>...dan " . (count($pesan_error) - 12) . " baris error lainnya.</b>";
+            
+            $_SESSION['error_csv_guru'] = $gabungan_error; 
+            header("Location: daftarGuru.php?status=error_csv");
+            exit;
+        }
+
+        // =========================================================
+        // PUTARAN 2: JIKA 100% MULUS, MASUKKAN KE DATABASE
+        // =========================================================
+        foreach ($data_valid as $d) {
+            $nip = mysqli_real_escape_string($koneksi, $d['nip']);
+            $password = mysqli_real_escape_string($koneksi, $d['password']);
+            $nama = mysqli_real_escape_string($koneksi, $d['nama']);
+            $email = mysqli_real_escape_string($koneksi, $d['email']);
+            $notelp = mysqli_real_escape_string($koneksi, $d['notelp']);
+            $json_mapel = mysqli_real_escape_string($koneksi, json_encode($d['akses']));
 
             // Generator ID (US001 & GR001)
             $angka_user = 1;
@@ -101,18 +157,12 @@ if (isset($_POST['upload_csv'])) {
                 $angka_guru++;
             }
 
-            // Eksekusi Simpan dengan status $wajib_ubah
-            $query_user = "INSERT INTO users (IDUser, Username, Password, Role, Status, WajibUbahPassword) VALUES ('$id_user', '$nip', '$password', 'guru', 'Aktif', '$wajib_ubah')";
-            if(mysqli_query($koneksi, $query_user)) {
-                $query_profil = "INSERT INTO guru (IDGuru, IDUser, NamaGuru, NIP_NUPTK, Email, NoTelp, MataPelajaran) VALUES ('$id_guru', '$id_user', '$nama', '$nip', '$email', '$notelp', '$json_mapel')";
-                mysqli_query($koneksi, $query_profil);
-                $berhasil++;
-            }
+            // Eksekusi Simpan
+            mysqli_query($koneksi, "INSERT INTO users (IDUser, Username, Password, Role, Status, WajibUbahPassword) VALUES ('$id_user', '$nip', '$password', 'guru', 'Aktif', '$wajib_ubah')");
+            mysqli_query($koneksi, "INSERT INTO guru (IDGuru, IDUser, NamaGuru, NIP_NUPTK, Email, NoTelp, MataPelajaran) VALUES ('$id_guru', '$id_user', '$nama', '$nip', '$email', '$notelp', '$json_mapel')");
         }
-        fclose($handle);
-
-        // Lempar hasil ke URL
-        header("Location: daftarGuru.php?status=info_upload&ok=$berhasil&fail=$gagal_format");
+        
+        header("Location: daftarGuru.php?status=sukses_upload");
         exit;
     }
 }
