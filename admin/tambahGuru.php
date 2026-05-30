@@ -190,6 +190,22 @@
                                 <h6 class="mb-0 fw-bold text-danger">Upload Massal Guru via CSV</h6>
                             </div>
                             <div class="card-body p-4 p-md-5">
+                                
+                                <!-- PAPAN INFORMASI / PERINGATAN UPLOAD MASSAL GURU -->
+                                <div class="alert alert-warning border-warning border-opacity-50 shadow-sm mb-4" role="alert" style="background-color: #fffbeb;">
+                                    <div class="d-flex">
+                                        <i class="bi bi-exclamation-triangle-fill fs-2 text-warning me-3 mt-1"></i>
+                                        <div>
+                                            <h6 class="fw-bold mb-2 text-dark">Penting! Panduan & Aturan Upload CSV Guru:</h6>
+                                            <ul class="mb-0 small text-dark" style="padding-left: 1.2rem; line-height: 1.6;">
+                                                <li><strong>Format File Wajib .CSV:</strong> Saat menyimpan di Excel (Save As), pastikan memilih format <b>CSV (Comma delimited)</b>. Ekstensi <i>.xlsx</i> akan ditolak.</li>
+                                                <li><strong>Kolom ke-4 (Akses Mengajar) Bersifat Opsional:</strong> Boleh dikosongkan jika guru belum memiliki jadwal. Jika ingin diisi, formatnya: <code>Kelas - Mata Pelajaran</code>. Pisahkan dengan koma jika lebih dari satu (Contoh: <i>X AKL 1 - Matematika, XI AKL 2 - Bahasa Inggris</i>).</li>
+                                                <li><strong>Hindari Username/NIP Ganda:</strong> Pastikan NIP yang ingin di-upload belum pernah didaftarkan ke dalam sistem sebelumnya.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div class="mb-4">
                                     <label class="form-label fw-bold text-secondary small">File Template CSV</label>
                                     <div class="p-3 bg-light rounded border border-dashed">
@@ -197,8 +213,7 @@
                                             <i class="bi bi-download me-2"></i> Download format_guru.csv
                                         </a>
                                         <div class="small text-muted mt-2">
-                                            Gunakan file ini sebagai format dasar. Untuk kolom <b>kelas_mapel</b>, pisahkan dengan tanda strip dan koma. <br>
-                                            <i>Contoh: X AKL 1 - Matematika, X AKL 2 - Matematika</i>
+                                            Gunakan file ini sebagai format dasar. Perhatikan susunan 6 kolomnya (NIP, Password, Nama, Mapel, Email, Telp).
                                         </div>
                                     </div>
                                 </div>
@@ -214,6 +229,17 @@
                                             <input type="file" id="fileUploadInput" name="file_csv" class="form-control position-absolute top-0 start-0 w-100 h-100 opacity-0" accept=".csv" required style="cursor: pointer;">
                                         </div>
                                     </div>
+
+                                    <div class="mb-4 bg-light p-3 rounded border">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" name="force_password_change_csv" id="forcePassCSV" value="1" checked>
+                                            <label class="form-check-label fw-bold text-danger" for="forcePassCSV">
+                                                Paksa perubahan kata sandi untuk semua guru
+                                            </label>
+                                            <div class="form-text mt-0">Seluruh guru di dalam file CSV ini akan diminta mengganti password saat pertama kali login.</div>
+                                        </div>
+                                    </div>
+
                                     <div class="d-flex justify-content-end">
                                         <button type="submit" name="upload_csv" class="btn btn-primary px-4 py-2 fw-bold">
                                             <i class="bi bi-upload me-2"></i> Upload Data
