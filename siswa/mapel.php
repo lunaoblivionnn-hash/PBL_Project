@@ -146,6 +146,16 @@ function hitungWaktuTersisa($deadline_str, $tgl_kumpul_str = null) {
         .breadcrumb-custom a:hover { text-decoration: underline; }
 
         @media (max-width: 992px) { #sidebar-course { display: none; } #main-content { padding: 20px; } }
+
+        /* NAV BAWAH (PREVIOUS & JUMP TO) */
+        .bottom-nav-box { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 20px 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); display: flex; justify-content: space-between; align-items: center; margin-top: 20px; }
+        .prev-activity { display: flex; align-items: center; text-decoration: none; color: #64748b; transition: 0.2s; padding-right: 25px; border-right: 1px solid #e2e8f0; }
+        .prev-activity:hover { color: var(--primary); }
+        .prev-activity i { font-size: 2.2rem; font-weight: 300; margin-right: 15px; }
+        .prev-info { display: flex; flex-direction: column; }
+        .prev-label { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+        .prev-title { font-weight: 700; color: var(--secondary); font-size: 1.05rem; }
+        .jump-select { max-width: 300px; border-color: #cbd5e1; border-radius: 8px; font-weight: 600; color: #475569; }
     </style>
 </head>
 <body>
@@ -338,6 +348,26 @@ function hitungWaktuTersisa($deadline_str, $tgl_kumpul_str = null) {
                     </div>
 
                     <div class="bg-light p-4 rounded-3 border mb-4">
+                        <!-- Info Waktu (Dibuka & Deadline) -->
+                        <div class="mb-4 pb-3 border-bottom border-secondary-subtle">
+                            <div class="d-flex align-items-center mb-1">
+                                <span class="fw-bold text-dark me-2" style="width: 100px;">Dibuka:</span>
+                                <span class="text-secondary"><?= isset($tugas['TanggalDibuat']) ? str_replace(
+                                    ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'], 
+                                    ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'], 
+                                    date('l, d M Y, H:i', strtotime($tugas['TanggalDibuat']))
+                                ) : '-' ?></span>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <span class="fw-bold text-dark me-2" style="width: 100px;">Jatuh tempo:</span>
+                                <span class="text-secondary"><?= str_replace(
+                                    ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'], 
+                                    ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'], 
+                                    date('l, d M Y, H:i', strtotime($tugas['Deadline']))
+                                ) ?></span>
+                            </div>
+                        </div>
+
                         <h6 class="fw-bold text-dark mb-3"><i class="bi bi-info-square me-2 text-primary"></i>Instruksi Pengerjaan / Soal:</h6>
                         <div class="text-dark mb-3" style="line-height: 1.7;">
                             <?= nl2br(htmlspecialchars($tugas['Deskripsi'] ?? 'Silakan kerjakan tugas sesuai instruksi guru.')) ?>
@@ -417,6 +447,45 @@ function hitungWaktuTersisa($deadline_str, $tgl_kumpul_str = null) {
                         </form>
                     </div>
                     <?php endif; ?>
+                <!-- NAVIGASI KONTEN (SEBELUMNYA & LOMPAT) -->
+                <div class="bottom-nav-box mt-5">
+                        <?php 
+                        // Mencari tugas sebelumnya berdasarkan urutan array
+                        $prev_tugas_id = '';
+                        $prev_tugas_judul = '';
+                        $keys = array_keys($semua_tugas);
+                        $current_index = array_search($id_tugas, $keys);
+                        
+                        if ($current_index > 0) {
+                            $prev_tugas_id = $keys[$current_index - 1];
+                            $prev_tugas_judul = $semua_tugas[$prev_tugas_id]['Judul'];
+                        }
+                        ?>
+                        
+                        <div>
+                            <?php if(!empty($prev_tugas_id)): ?>
+                            <a href="javascript:void(0)" onclick="openTaskDetail('<?= $prev_tugas_id ?>')" class="prev-activity">
+                                <i class="bi bi-chevron-left"></i>
+                                <div class="prev-info">
+                                    <span class="prev-label">Aktivitas Sebelumnya</span>
+                                    <span class="prev-title"><?= htmlspecialchars(strtoupper($prev_tugas_judul)) ?></span>
+                                </div>
+                            </a>
+                            <?php else: ?>
+                            <span class="text-muted small fst-italic">Ini adalah aktivitas pertama.</span>
+                            <?php endif; ?>
+                        </div>
+
+                        <div>
+                            <select class="form-select jump-select" onchange="if(this.value) openTaskDetail(this.value)">
+                                <option value="" selected disabled>Lompat ke...</option>
+                                <?php foreach($semua_tugas as $jump_id => $jump_data): ?>
+                                    <option value="<?= $jump_id ?>"><?= htmlspecialchars($jump_data['Judul']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+
                 </div>
             </div>
             <?php endforeach; ?>
