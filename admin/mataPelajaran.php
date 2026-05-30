@@ -98,13 +98,16 @@ while($row = mysqli_fetch_assoc($query_semua_siswa)) {
 
             <main class="col-md-9 ms-sm-auto col-lg-10 px-0">
                 
-                <div class="header-red">
+            <div class="header-red">
                     <div class="container">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
                                 <h2>Kelola Mata Pelajaran per Kelas</h2>
                                 <p class="mb-0 text-white-50 small">Pilih rumpun kelas untuk mengonfigurasi kurikulum mata pelajaran atau mengatur daftar siswa.</p>
                             </div>
+                            <a href="tambahMapel.php" class="btn btn-light fw-bold px-4 text-danger shadow-sm border-0 rounded-pill">
+                                <i class="bi bi-plus-lg me-2"></i> Tambah Mapel
+                            </a>
                         </div>
                     </div>
                 </div>
