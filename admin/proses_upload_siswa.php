@@ -4,27 +4,29 @@ require '../login/koneksi.php';
 
 if (isset($_POST['upload_csv'])) {
     $file = $_FILES['file_csv']['tmp_name'];
+    
+    // =====================================================================
+    // TANGKAP STATUS WAJIB UBAH PASSWORD DARI CHECKBOX FORM
+    // =====================================================================
+    $wajib_ubah = isset($_POST['force_password_change_csv']) ? 1 : 0;
 
     // Buka file CSV untuk dibaca
     if (($handle = fopen($file, "r")) !== FALSE) {
         
-        // =====================================================================
         // SOLUSI UNIVERSAL: DETEKSI PEMISAH (DELIMITER) OTOMATIS
-        // =====================================================================
         $firstLine = fgets($handle); // Ambil baris pertama (header)
-        // Cek apakah ada karakter titik koma (;) di baris pertama
         $delimiter = (strpos($firstLine, ';') !== FALSE) ? ';' : ',';
         
-        // Kembalikan kursor pembaca ke awal file agar baris pertama bisa dibaca ulang oleh fgetcsv
+        // Kembalikan kursor pembaca ke awal file
         rewind($handle);
 
-        // Lewati baris pertama (judul kolom: username, password, nama, dll)
+        // Lewati baris pertama (judul kolom)
         fgetcsv($handle, 1000, $delimiter); 
 
         // Looping membaca setiap baris data siswa
         while (($data = fgetcsv($handle, 1000, $delimiter)) !== FALSE) {
             
-            // Tangkap data sesuai urutan kolom: username, password, nama, kelas, email, notelp
+            // Tangkap data sesuai urutan kolom
             $username = mysqli_real_escape_string($koneksi, $data[0]); 
             $password = mysqli_real_escape_string($koneksi, $data[1]);
             $nama     = mysqli_real_escape_string($koneksi, $data[2]); 
@@ -38,9 +40,7 @@ if (isset($_POST['upload_csv'])) {
             // Set password default jika dikosongkan di Excel
             if (empty($password)) $password = 'siswa123';
 
-            // =====================================================================
             // GENERATOR ID USER (US0001) - AUTO
-            // =====================================================================
             $angka_user = 1;
             while(true) {
                 $id_user = "US" . sprintf("%03d", $angka_user); 
@@ -49,9 +49,7 @@ if (isset($_POST['upload_csv'])) {
                 $angka_user++;
             }
 
-            // =====================================================================
             // GENERATOR ID SISWA (IS001) - AUTO
-            // =====================================================================
             $angka_siswa = 1;
             while(true) {
                 $id_siswa = "IS" . sprintf("%03d", $angka_siswa); 
@@ -61,11 +59,10 @@ if (isset($_POST['upload_csv'])) {
             }
 
             // =====================================================================
-            // SIMPAN KE DATABASE
+            // SIMPAN KE DATABASE (DENGAN WAJIB UBAH PASSWORD)
             // =====================================================================
-            // Status otomatis 'Aktif' karena sudah kita set DEFAULT di database
-            $query_user = "INSERT INTO USERS (IDUser, Username, Password, Role, Status) 
-                           VALUES ('$id_user', '$username', '$password', 'siswa', 'Aktif')";
+            $query_user = "INSERT INTO USERS (IDUser, Username, Password, Role, Status, WajibUbahPassword) 
+                           VALUES ('$id_user', '$username', '$password', 'siswa', 'Aktif', '$wajib_ubah')";
             
             if(mysqli_query($koneksi, $query_user)) {
                 $query_profil = "INSERT INTO SISWA (IDSiswa, IDUser, NamaSiswa, NISN, Kelas, Email, NoTelp) 
