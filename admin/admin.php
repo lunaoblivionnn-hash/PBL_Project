@@ -206,17 +206,18 @@ $query_siswa_baru = mysqli_query($koneksi, "SELECT SISWA.*, users.Status FROM SI
                                                     $status_badge = '<span class="badge bg-success bg-opacity-10 text-success border border-success">Aktif</span>';
                                                 }
 
-                                                $id_siswa = isset($row['NISN']) ? $row['NISN'] : '-';
+                                                $id_siswa_asli = isset($row['IDSiswa']) ? $row['IDSiswa'] : '';
+                                                $nisn_tampil = isset($row['NISN']) ? $row['NISN'] : '-';
                                                 $nama_siswa = isset($row['NamaSiswa']) ? $row['NamaSiswa'] : 'Tanpa Nama';
                                                 $kelas = isset($row['Kelas']) ? $row['Kelas'] : '-';
                                         ?>
                                         <tr>
-                                            <td class="ps-4"><span class="badge bg-secondary"><?php echo $id_siswa; ?></span></td>
+                                            <td class="ps-4"><span class="badge bg-secondary"><?php echo $nisn_tampil; ?></span></td>
                                             <td class="fw-semibold"><?php echo $nama_siswa; ?></td>
                                             <td><?php echo $kelas; ?></td>
                                             <td><?php echo $status_badge; ?></td>
                                             <td class="pe-4 text-end">
-                                                <a href="editSiswa.php?id=<?php echo $id_siswa; ?>" class="btn btn-sm btn-light text-primary" title="Edit Data"><i class="bi bi-pencil-square"></i></a>
+                                                <a href="editSiswa.php?id=<?php echo $id_siswa_asli; ?>" class="btn btn-sm btn-light text-primary" title="Edit Data"><i class="bi bi-pencil-square"></i></a>
                                             </td>
                                         </tr>
                                         <?php 
