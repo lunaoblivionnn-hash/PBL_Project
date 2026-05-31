@@ -160,6 +160,21 @@ if (isset($_POST['upload_csv'])) {
             // Eksekusi Simpan
             mysqli_query($koneksi, "INSERT INTO users (IDUser, Username, Password, Role, Status, WajibUbahPassword) VALUES ('$id_user', '$nip', '$password', 'guru', 'Aktif', '$wajib_ubah')");
             mysqli_query($koneksi, "INSERT INTO guru (IDGuru, IDUser, NamaGuru, NIP_NUPTK, Email, NoTelp, MataPelajaran) VALUES ('$id_guru', '$id_user', '$nama', '$nip', '$email', '$notelp', '$json_mapel')");
+
+            // =========================================================
+            // SINKRONISASI KE TABEL MAPEL (AGAR TAMPIL DI DASHBOARD)
+            // =========================================================
+            if (!empty($d['akses'])) {
+                foreach ($d['akses'] as $kelas_asli => $mapel_array) {
+                    foreach ($mapel_array as $mapel_asli) {
+                        $kelas_esc = mysqli_real_escape_string($koneksi, $kelas_asli);
+                        $mapel_esc = mysqli_real_escape_string($koneksi, $mapel_asli);
+                        
+                        // Menempelkan ID Guru ke tabel mapel yang sesuai
+                        mysqli_query($koneksi, "UPDATE mapel SET IDGuru = '$id_guru' WHERE NamaMapel = '$mapel_esc' AND Kelas LIKE '%\"$kelas_esc\"%'");
+                    }
+                }
+            }
         }
         
         header("Location: daftarGuru.php?status=sukses_upload");
