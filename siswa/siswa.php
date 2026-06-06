@@ -20,6 +20,20 @@ if(empty($id_user)) {
     }
 }
 
+// =========================================================
+// PROSES SIMPAN SANDI BARU (DARI MODAL WAJIB UBAH)
+// =========================================================
+if (isset($_POST['simpan_sandi_wajib'])) {
+    $sandi_baru = mysqli_real_escape_string($koneksi, $_POST['password_baru']);
+    
+    // Update password dan matikan sakelar wajib ubah (jadi 0)
+    mysqli_query($koneksi, "UPDATE users SET Password = '$sandi_baru', WajibUbahPassword = 0 WHERE IDUser = '$id_user'");
+    
+    // Refresh halaman agar pop-up hilang
+    header("Location: " . $_SERVER['PHP_SELF'] . "?status=sandi_diperbarui");
+    exit;
+}
+
 $query_status_sandi = mysqli_query($koneksi, "SELECT WajibUbahPassword FROM users WHERE IDUser = '$id_user'");
 $status_sandi = mysqli_fetch_assoc($query_status_sandi);
 $wajib_ubah = isset($status_sandi['WajibUbahPassword']) ? $status_sandi['WajibUbahPassword'] : 0;
@@ -574,7 +588,47 @@ $total_mapel = mysqli_num_rows($query_mapel);
             });
         }
 
-        document.addEventListener('DOMContentLoaded', sinkronisasiProgressBarLMS);
+        <?php if($wajib_ubah == 1): ?>
+    <!-- MODAL WAJIB UBAH PASSWORD (TIDAK BISA DITUTUP/DI-KLIK LUAR) -->
+    <div class="modal fade" id="modalWajibSandi" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <form method="POST" action="">
+                    <div class="modal-header bg-danger text-white border-0">
+                        <h5 class="modal-title fw-bold"><i class="bi bi-shield-lock-fill me-2"></i>Keamanan Akun</h5>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="alert alert-warning small border-warning border-opacity-50 text-dark">
+                            <i class="bi bi-exclamation-triangle-fill me-2 text-warning"></i>
+                            Demi keamanan, Admin mewajibkan Anda untuk mengubah kata sandi default. Silakan buat kata sandi baru untuk melanjutkan ke Dashboard.
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-secondary">Kata Sandi Baru</label>
+                            <input type="password" name="password_baru" class="form-control" placeholder="Minimal 6 karakter..." required minlength="6">
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light border-0">
+                        <button type="submit" name="simpan_sandi_wajib" class="btn btn-primary fw-bold px-4 w-100">Simpan Sandi & Masuk <i class="bi bi-arrow-right ms-2"></i></button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Memunculkan pop-up secara paksa saat halaman dimuat
+        document.addEventListener('DOMContentLoaded', function() {
+            var modalSandi = new bootstrap.Modal(document.getElementById('modalWajibSandi'));
+            modalSandi.show();
+        });
     </script>
-</body>
-</html>
+    <?php endif; ?>
+
+    <?php if(isset($_GET['status']) && $_GET['status'] == 'sandi_diperbarui'): ?>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            Swal.fire({ title: 'Akses Terbuka!', text: 'Kata sandi berhasil diperbarui. Selamat datang!', icon: 'success', timer: 3000, showConfirmButton: false });
+            window.history.replaceState(null, null, window.location.pathname);
+        });
+    </script>
+    <?php endif; ?>
