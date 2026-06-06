@@ -1,3 +1,5 @@
+SET FOREIGN_KEY_CHECKS = 0;
+
 -- phpMyAdmin SQL Dump
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
@@ -32,7 +34,7 @@ CREATE TABLE `gamifikasi` (
   `IDSiswa` char(5) DEFAULT NULL,
   `IDLevel` char(5) DEFAULT NULL,
   `TotalPoint` mediumint DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -48,7 +50,7 @@ CREATE TABLE `guru` (
   `Email` varchar(100) DEFAULT NULL,
   `NoTelp` varchar(20) DEFAULT NULL,
   `MataPelajaran` text
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data untuk tabel `guru`
@@ -76,7 +78,7 @@ CREATE TABLE `jadwal_siswa` (
   `JamSelesai` time NOT NULL,
   `Kegiatan` varchar(100) NOT NULL,
   `WarnaLabel` varchar(20) DEFAULT 'primary'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -94,7 +96,7 @@ CREATE TABLE `kuis` (
   `Deadline` datetime DEFAULT NULL,
   `TanggalDibuat` datetime NOT NULL,
   `Status` enum('Draft','Published') DEFAULT 'Published'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -109,7 +111,7 @@ CREATE TABLE `kuis_jawaban` (
   `IDOpsi` int DEFAULT NULL,
   `JawabanTeks` text,
   `IsBenar` tinyint(1) DEFAULT '0'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -126,7 +128,7 @@ CREATE TABLE `kuis_nilai` (
   `Benar` int DEFAULT '0',
   `Salah` int DEFAULT '0',
   `NilaiAkhir` float DEFAULT '0'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -139,7 +141,7 @@ CREATE TABLE `kuis_opsi` (
   `IDSoal` int NOT NULL,
   `TeksOpsi` varchar(255) NOT NULL,
   `IsBenar` tinyint(1) DEFAULT '0'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -157,7 +159,7 @@ CREATE TABLE `kuis_soal` (
   `Wajib` tinyint(1) DEFAULT '1',
   `KunciJawaban` text,
   `Urutan` int NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -173,7 +175,7 @@ CREATE TABLE `mapel` (
   `NamaMapel` varchar(60) NOT NULL,
   `Deskripsi` text,
   `Gambar` varchar(255) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data untuk tabel `mapel`
@@ -197,7 +199,7 @@ CREATE TABLE `master_aturan_poin` (
   `IDAturan` char(5) NOT NULL,
   `JenisAktivitas` varchar(50) DEFAULT NULL,
   `BesaranPoin` int DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data untuk tabel `master_aturan_poin`
@@ -222,7 +224,7 @@ CREATE TABLE `master_level` (
   `BatasPoin` mediumint DEFAULT NULL,
   `LevelAngka` tinyint DEFAULT NULL,
   `Gelar` varchar(30) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data untuk tabel `master_level`
@@ -258,7 +260,7 @@ CREATE TABLE `materi` (
   `Filepath` varchar(255) DEFAULT NULL,
   `TipeFile` varchar(10) DEFAULT NULL,
   `TanggalUpload` datetime DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -273,7 +275,7 @@ CREATE TABLE `notifikasi` (
   `Pesan` text,
   `IsRead` tinyint(1) DEFAULT '0',
   `CreatedAt` timestamp NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -284,7 +286,7 @@ CREATE TABLE `notifikasi` (
 CREATE TABLE `pengaturan` (
   `Kunci` varchar(50) NOT NULL,
   `Nilai` varchar(50) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data untuk tabel `pengaturan`
@@ -308,7 +310,7 @@ CREATE TABLE `pengumpulan_tugas` (
   `Nilai` int DEFAULT NULL,
   `Status` enum('belum_dinilai','sudah_dinilai','terlambat') DEFAULT NULL,
   `KomentarGuru` varchar(200) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -320,7 +322,7 @@ CREATE TABLE `quotes` (
   `IDQuote` int NOT NULL,
   `TeksQuote` text NOT NULL,
   `Tokoh` varchar(100) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data untuk tabel `quotes`
@@ -346,7 +348,7 @@ CREATE TABLE `riwayat_poin` (
   `IDPengumpulan` int DEFAULT NULL,
   `IDAturan` char(5) DEFAULT NULL,
   `TanggalWaktu` timestamp NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -365,7 +367,7 @@ CREATE TABLE `siswa` (
   `dibuat_pada` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `FotoProfil` varchar(255) DEFAULT NULL,
   `Bio` text
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data untuk tabel `siswa`
@@ -416,7 +418,7 @@ CREATE TABLE `topik_mapel` (
   `Kelas` varchar(50) DEFAULT NULL,
   `NamaTopik` varchar(100) NOT NULL,
   `Urutan` int NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data untuk tabel `topik_mapel`
@@ -442,7 +444,7 @@ CREATE TABLE `tugas` (
   `Deadline` datetime DEFAULT NULL,
   `TipeFileDiizinkan` varchar(255) DEFAULT NULL,
   `PoinMaksimal` int DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -458,7 +460,7 @@ CREATE TABLE `users` (
   `LastAccess` datetime DEFAULT NULL,
   `WajibUbahPassword` tinyint(1) DEFAULT '0',
   `Status` enum('Aktif','Non-Aktif') DEFAULT 'Aktif'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data untuk tabel `users`
@@ -809,3 +811,5 @@ COMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+
+SET FOREIGN_KEY_CHECKS = 1;
