@@ -588,7 +588,11 @@ $total_mapel = mysqli_num_rows($query_mapel);
             });
         }
 
-        <?php if($wajib_ubah == 1): ?>
+        document.addEventListener('DOMContentLoaded', sinkronisasiProgressBarLMS);
+        
+    </script> <!-- INI DIA TERSANGKANYA! KITA HARUS MENUTUP AREA JAVASCRIPT DI SINI -->
+
+    <?php if($wajib_ubah == 1): ?>
     <!-- MODAL WAJIB UBAH PASSWORD (TIDAK BISA DITUTUP/DI-KLIK LUAR) -->
     <div class="modal fade" id="modalWajibSandi" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -632,3 +636,5 @@ $total_mapel = mysqli_num_rows($query_mapel);
         });
     </script>
     <?php endif; ?>
+</body>
+</html>
