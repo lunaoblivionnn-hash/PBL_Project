@@ -285,9 +285,10 @@ if(!empty($filter_mapel)) $url_query .= "&mapel=".urlencode($filter_mapel);
     
     <?php if(isset($_GET['status'])): ?>
         <script>
-            let status = '<?= $_GET['status'] ?>';
-            let params = new URLSearchParams(window.location.search);
-            
+            const urlParams = new URLSearchParams(window.location.search);
+            const status = urlParams.get('status');
+            const params = new URLSearchParams(window.location.search);
+
             if(status === 'sukses_tambah') {
                 Swal.fire({ title: 'Berhasil!', text: 'Data guru baru berhasil ditambahkan.', icon: 'success', timer: 3000, showConfirmButton: false });
             } else if(status === 'sukses_edit') {
@@ -296,22 +297,20 @@ if(!empty($filter_mapel)) $url_query .= "&mapel=".urlencode($filter_mapel);
                 Swal.fire({ title: 'Terhapus!', text: 'Data berhasil dihapus secara permanen.', icon: 'success', timer: 3000, showConfirmButton: false });
             } else if(status === 'gagal_hapus') {
                 Swal.fire({ title: 'Gagal!', text: 'Terjadi kesalahan saat menghapus data.', icon: 'error', timer: 3000, showConfirmButton: false });
-            } else if(status === 'info_upload') {
-                let ok = params.get('ok'); let fail = params.get('fail');
-                if (fail > 0) {
-                    Swal.fire({ title: 'Upload Selesai!', html: `<b class="text-success">${ok} Data Berhasil</b> disimpan.<br><b class="text-danger">${fail} Data Gagal</b> karena typo/format kelas tidak sesuai.`, icon: 'warning', confirmButtonColor: '#0f6cb6' });
-                } else {
-                    Swal.fire({ title: 'Upload Sukses!', text: `${ok} Data guru berhasil diupload tanpa ada kesalahan.`, icon: 'success', timer: 4000, showConfirmButton: false });
-                }
+            
+            // ============== TAMBAHAN PENANGKAP NOTIFIKASI UPLOAD CSV BARU ==============
             } else if(status === 'sukses_upload') {
+                Swal.fire({ title: 'Upload Sukses! 🎉', text: 'Seluruh data guru berhasil diupload dan jadwal mengajar telah disinkronkan ke database.', icon: 'success', timer: 4000, showConfirmButton: false });
+            } else if(status === 'error_csv') {
                 Swal.fire({ 
-                    title: 'Upload Sukses! 🎉', 
-                    text: 'Seluruh data guru dari file CSV berhasil ditambahkan dan jadwal mengajar telah disinkronkan.', 
-                    icon: 'success', 
-                    timer: 4000, 
-                    showConfirmButton: false 
+                    title: 'Upload Dibatalkan!', 
+                    html: `<div class="text-start small text-danger" style="line-height:1.6;">Data ditolak karena ada kesalahan pada file CSV Anda:<br><br><div class="bg-light p-2 border border-danger-subtle rounded text-dark"><?= isset($_SESSION['error_csv_guru']) ? addslashes($_SESSION['error_csv_guru']) : 'Terjadi kesalahan tak diketahui.' ?></div><br>Mohon perbaiki file CSV Anda lalu upload ulang.</div>`, 
+                    icon: 'error', 
+                    confirmButtonColor: '#dc3545'
                 });
+                <?php unset($_SESSION['error_csv_guru']); ?>
             }
+
             window.history.replaceState(null, null, window.location.pathname);
         </script>
     <?php endif; ?>
