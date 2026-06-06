@@ -112,7 +112,7 @@ $desc_map = [
                     <div class="text-muted small fw-bold mb-3 px-3 uppercase" style="letter-spacing: 1px;">MENU AKADEMIK</div>
                     <ul class="nav flex-column">
                         <li class="nav-item"><a class="nav-link" href="siswa.php"><i class="bi bi-grid-1x2-fill me-3 fs-5 align-middle"></i> Dashboard</a></li>
-                        <li class="nav-item"><a class="nav-link" href="kalender.php"><i class="bi bi-calendar2-week-fill me-3 fs-5 align-middle"></i> Jadwal & Agenda</a></li>
+                        <li class="nav-item"><a class="nav-link" href="jadwal.php"><i class="bi bi-calendar2-week-fill me-3 fs-5 align-middle"></i> Jadwal & Agenda</a></li>
                         <li class="nav-item mt-4 mb-2"><div class="text-muted small fw-bold px-3 uppercase" style="letter-spacing: 1px;">PRESTASI</div></li>
                         <li class="nav-item"><a class="nav-link active text-warning" href="gamifikasi.php"><i class="bi bi-trophy-fill me-3 fs-5 align-middle"></i> Gamifikasi</a></li>
                     </ul>
