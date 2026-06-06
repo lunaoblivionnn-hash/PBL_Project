@@ -27,10 +27,21 @@ if (isset($_POST['upload_csv'])) {
     $lower_mapel = array_map('strtolower', $master_mapel);
 
     if (($handle = fopen($file, "r")) !== FALSE) {
+        // Ambil baris pertama untuk dianalisa
         $firstLine = fgets($handle); 
-        $delimiter = (strpos($firstLine, ';') !== FALSE) ? ';' : ',';
+        
+        // Deteksi pemisah (delimiter) mana yang paling banyak digunakan di baris pertama
+        $delimiters = [';' => 0, ',' => 0, "\t" => 0, '|' => 0];
+        foreach ($delimiters as $delim => &$count) {
+            $count = substr_count($firstLine, $delim);
+        }
+        $delimiter = array_keys($delimiters, max($delimiters))[0];
+
+        // Kembalikan kursor baca ke baris paling atas
         rewind($handle);
-        fgetcsv($handle, 1000, $delimiter); // Lewati judul kolom
+        
+        // Lewati judul kolom (Header)
+        fgetcsv($handle, 1000, $delimiter); 
 
         $baris_excel = 2; 
         $ada_error = false;
