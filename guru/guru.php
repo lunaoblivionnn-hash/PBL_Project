@@ -59,9 +59,28 @@ $is_first = true;
 while($row = mysqli_fetch_assoc($q_mapel_guru)) {
     $id_mapel_row = $row['IDMapel'];
     $mapel_unik[$row['NamaMapel']] = true;
-    if($is_first) { $id_mapel_pertama = $row['IDMapel']; $is_first = false; }
-    
-    $kelas_arr = json_decode($row['Kelas'], true) ?: [];
+        if($is_first) { $id_mapel_pertama = $row['IDMapel']; $is_first = false; }
+            
+        // =================================================================
+        // MESIN PEMBACA KELAS ANTI-ERROR (SUPPORT JSON & KETIK MANUAL)
+        // =================================================================
+        $raw_kelas = trim($row['Kelas'] ?? '');
+        $kelas_arr = json_decode($raw_kelas, true);
+            
+        // 1. Jika gagal decode karena string database mengandung backslash (\)
+        if ($kelas_arr === null) {
+            $kelas_arr = json_decode(stripslashes($raw_kelas), true);
+        }
+        // 2. Jika formatnya bukan JSON (Karena Admin ketik manual di database pakai koma)
+        if (!is_array($kelas_arr) && !empty($raw_kelas)) {
+            $kelas_arr = array_filter(array_map('trim', explode(',', $raw_kelas)));
+        }
+        // 3. Jika kolom kelas memang kosong, JANGAN sembunyikan Mapel-nya! Munculkan dengan peringatan.
+        if (empty($kelas_arr) || !is_array($kelas_arr)) {
+            $kelas_arr = ['Kelas Belum Diatur'];
+        }
+        // =================================================================
+                // Tarik daftar nama Topik/Bab unik khusus untuk mata pelajaran ini
     
     // Tarik daftar nama Topik/Bab unik khusus untuk mata pelajaran ini
     $q_tpk = mysqli_query($koneksi, "SELECT DISTINCT NamaTopik FROM topik_mapel WHERE IDMapel = '$id_mapel_row'");
