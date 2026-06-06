@@ -1,7 +1,7 @@
 <?php
 $host = "127.0.0.1";
 $user = "root";
-$pass = "balqistnayla";
+$pass = "";
 $db   = "lms_wongsorejo";
 
 $koneksi = mysqli_connect($host, $user, $pass, $db);
