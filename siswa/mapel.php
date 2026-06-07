@@ -608,53 +608,76 @@ function hitungWaktuTersisa($deadline_str, $tgl_kumpul_str = null) {
             }
         }
 
-        // FITUR TANDAI SELESAI & ANTI-SPAM POIN
+        // FITUR TANDAI SELESAI & ANTI-SPAM POIN (REVISI DATABASE CENTRIC)
         function toggleSelesai(btn, idItem) {
             let isDone = btn.classList.contains('done');
             if(!isDone) {
-                // Ubah UI seketika
-                btn.classList.add('done');
-                btn.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Selesai';
-                localStorage.setItem(idItem, 'selesai');
                 
-                // Cek memori browser: Apakah poin ini sudah diklaim sebelumnya?
-                if(!localStorage.getItem(idItem + '_klaim')) {
-                    fetch('proses_poin_materi.php', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: 'id_materi=' + encodeURIComponent(idItem)
-                    })
-                    .then(response => response.json()) // Baca respon sebagai JSON (bersih)
-                    .then(data => {
-                        if(data.status === 'sukses') {
-                            localStorage.setItem(idItem + '_klaim', 'true'); // Kunci agar tidak spam
-                            Swal.fire({ 
-                                title: 'Materi Selesai! 📚', 
-                                html: `Selamat! <b>+${data.poin} XP</b> berhasil ditambahkan.`, 
-                                icon: 'success', 
-                                toast: true, 
-                                position: 'bottom-end', 
-                                showConfirmButton: false, 
-                                timer: 4000, 
-                                timerProgressBar: true 
-                            });
-                        }
-                    }).catch(error => console.log(error));
-                }
+                // Ubah tombol jadi mode "Loading" sesaat
+                let teksAwal = btn.innerHTML;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Menyimpan...';
+                
+                // Tembak server secara langsung
+                fetch('proses_poin_materi.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'id_materi=' + encodeURIComponent(idItem)
+                })
+                .then(response => response.json()) 
+                .then(data => {
+                    // Ubah tombol jadi warna hijau (Selesai)
+                    btn.classList.add('done');
+                    btn.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Selesai';
+                    localStorage.setItem(idItem, 'selesai'); // Kunci warna hijau di memori
+
+                    if(data.status === 'sukses') {
+                        // Jika berhasil dapat XP perdana
+                        Swal.fire({ 
+                            title: 'Materi Selesai! 📚', 
+                            html: data.notif || `Selamat! <b>+${data.poin} XP</b> berhasil ditambahkan.`, 
+                            icon: 'success', 
+                            toast: true, position: 'bottom-end', 
+                            showConfirmButton: false, timer: 4000, timerProgressBar: true 
+                        });
+                    } else if (data.status === 'sudah_klaim') {
+                        // Jika sengaja ngetes pencet berkali-kali
+                         Swal.fire({ 
+                            title: 'Sudah Tuntas!', 
+                            text: 'Materi ini sudah kamu selesaikan dan XP-nya sudah masuk.', 
+                            icon: 'info', 
+                            toast: true, position: 'bottom-end', 
+                            showConfirmButton: false, timer: 3500
+                        });
+                    } else {
+                        // Jika ada error PHP dari server
+                        Swal.fire('Ups!', data.pesan || 'Terjadi kesalahan sistem.', 'warning');
+                        btn.innerHTML = teksAwal; btn.classList.remove('done');
+                    }
+                }).catch(error => {
+                    console.error('Error Network:', error);
+                    Swal.fire('Koneksi Gagal', 'Sistem gagal menghubungi server poin.', 'error');
+                    btn.innerHTML = teksAwal; btn.classList.remove('done');
+                });
+
             } else {
-                // Boleh un-check UI, TAPI poin yang sudah masuk ke DB tetap aman (tidak nambah lagi jika diklik ulang)
+                // Kembalikan tombol ke kondisi semula (Abu-abu)
                 btn.classList.remove('done');
                 btn.innerHTML = '<i class="bi bi-circle me-1"></i> Tandai Selesai';
-                localStorage.removeItem(idItem);
+                localStorage.removeItem(idItem); 
             }
         }
 
+        // ==============================================================
+        // FITUR SINKRONISASI TOMBOL SAAT HALAMAN DIMUAT (RELOAD)
+        // ==============================================================
         document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.btn-selesai').forEach(btn => {
-                let idItem = btn.getAttribute('onclick');
-                if(idItem && idItem.includes('toggleSelesai')) {
-                    let match = idItem.match(/'([^']+)'/);
-                    if(match && localStorage.getItem(match[1]) === 'selesai') {
+                // Ambil ID Materi dari atribut onclick
+                let match = btn.getAttribute('onclick').match(/'(.*?)'/);
+                if(match && match[1]) {
+                    let idItem = match[1];
+                    // Cek apakah warna hijau sudah tersimpan di browser
+                    if(localStorage.getItem(idItem) === 'selesai') {
                         btn.classList.add('done');
                         btn.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Selesai';
                     }
