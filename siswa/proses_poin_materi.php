@@ -1,45 +1,42 @@
 <?php
+// PASTIKAN TIDAK ADA SATUPUN SPASI ATAU BARIS KOSONG SEBELUM TAG <?php INI
+ob_start();
 session_start();
 require '../login/koneksi.php';
 
-// Pastikan respon berupa JSON agar Javascript bisa membacanya dengan rapi
-header('Content-Type: application/json');
+// Fungsi untuk memastikan respon HANYA JSON
+function json_die($status, $pesan = '', $poin = 0) {
+    ob_end_clean(); // Hapus semua sampah output sebelumnya
+    header('Content-Type: application/json');
+    echo json_encode(['status' => $status, 'pesan' => $pesan, 'poin' => $poin]);
+    exit;
+}
 
 if(!isset($_SESSION['role']) || $_SESSION['role'] != 'siswa'){
-    echo json_encode(['status' => 'error', 'pesan' => 'Akses ditolak']); exit;
+    json_die('error', 'Akses ditolak');
 }
 
 $id_user = $_SESSION['IDUser'];
-// Hapus kata 'materi_' untuk mendapatkan ID asli (contoh: M0001)
 $id_materi = mysqli_real_escape_string($koneksi, str_replace('materi_', '', $_POST['id_materi']));
 
 $q_siswa = mysqli_query($koneksi, "SELECT IDSiswa FROM siswa WHERE IDUser='$id_user'");
 $id_siswa = mysqli_fetch_assoc($q_siswa)['IDSiswa'] ?? '';
 
-// CEK ANTI-SPAM: Apakah poin materi ini sudah pernah diklaim siswa ini?
-// (Kita gunakan IDPengumpulan untuk menumpang menyimpan IDMateri sebagai penanda unik)
+// CEK ANTI-SPAM
 $q_cek = mysqli_query($koneksi, "SELECT IDRiwayat FROM riwayat_poin WHERE IDSiswa='$id_siswa' AND IDPengumpulan='$id_materi'");
-
 if(mysqli_num_rows($q_cek) > 0) {
-    // Jika sudah pernah, hentikan proses (Mencegah eksploitasi klik berkali-kali)
-    echo json_encode(['status' => 'sudah_klaim']); exit;
+    json_die('sudah_klaim', 'Sudah diklaim');
 }
 
-// Beri poin (Misal 5 XP untuk membaca materi)
-$poin_materi = 5; 
-$id_aturan = "AT006"; // Sesuaikan dengan ID Aturan "Membaca Materi" di excelmu jika ada
+// AMBIL POIN (AT001 = Baca Materi)
+$q_aturan = mysqli_query($koneksi, "SELECT BesaranPoin FROM master_aturan_poin WHERE IDAturan='AT001'");
+$poin_materi = (int)(mysqli_fetch_assoc($q_aturan)['BesaranPoin'] ?? 20);
 
-// 1. Update Gamifikasi Siswa
-$q_gami = mysqli_query($koneksi, "SELECT IDGamifikasi FROM gamifikasi WHERE IDSiswa='$id_siswa'");
-if(mysqli_num_rows($q_gami) > 0) {
-    mysqli_query($koneksi, "UPDATE gamifikasi SET TotalPoint = TotalPoint + $poin_materi WHERE IDSiswa='$id_siswa'");
-} else {
-    $idg = "G" . str_pad(rand(100, 9999), 4, "0", STR_PAD_LEFT);
-    mysqli_query($koneksi, "INSERT INTO gamifikasi (IDGamifikasi, IDSiswa, IDLevel, TotalPoint) VALUES ('$idg', '$id_siswa', 'LV001', $poin_materi)");
-}
+// CATAT RIWAYAT
+mysqli_query($koneksi, "INSERT INTO riwayat_poin (IDSiswa, IDAturan, IDPengumpulan, TanggalWaktu) VALUES ('$id_siswa', 'AT001', '$id_materi', NOW())");
 
-// 2. Catat Riwayat Poin
-mysqli_query($koneksi, "INSERT INTO riwayat_poin (IDSiswa, IDAturan, IDPengumpulan, TanggalWaktu) VALUES ('$id_siswa', '$id_aturan', '$id_materi', NOW())");
+// UPDATE GAMIFIKASI
+mysqli_query($koneksi, "UPDATE gamifikasi SET TotalPoint = TotalPoint + $poin_materi WHERE IDSiswa = '$id_siswa'");
 
-echo json_encode(['status' => 'sukses', 'poin' => $poin_materi]);
+json_die('sukses', 'XP Berhasil!', $poin_materi);
 ?>
