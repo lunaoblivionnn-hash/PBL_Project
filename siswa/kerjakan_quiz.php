@@ -12,36 +12,26 @@ if(empty($id_kuis)) { die("Kuis tidak ditemukan!"); }
 // 1. Ambil Data Siswa
 $q_siswa = mysqli_query($koneksi, "SELECT IDSiswa, NamaSiswa FROM siswa WHERE IDUser='$id_user'");
 $siswa = mysqli_fetch_assoc($q_siswa);
-$id_siswa = $siswa['IDSiswa'];
+$id_siswa = $siswa['IDSiswa'] ?? '';
+$nama_siswa = $siswa['NamaSiswa'] ?? 'Siswa';
 
-// 2. Ambil Data Kuis
+// 2. Ambil Info Kuis
 $q_kuis = mysqli_query($koneksi, "SELECT * FROM kuis WHERE IDKuis='$id_kuis'");
+if(mysqli_num_rows($q_kuis) == 0) { die("Kuis tidak ditemukan!"); }
 $kuis = mysqli_fetch_assoc($q_kuis);
+$id_mapel = $kuis['IDMapel'];
 
-if(!$kuis || $kuis['Status'] != 'Published') {
-    die("<script>alert('Ujian ini sudah ditutup atau tidak tersedia.'); window.location='siswa.php';</script>");
-}
-
-// Cek Deadline
-if(strtotime($kuis['Deadline']) < time()) {
-    die("<script>alert('Waktu tenggat (Deadline) ujian ini telah berakhir.'); window.location='siswa.php';</script>");
-}
-
-// 3. Manajemen Waktu & Sesi Ujian (Tabel kuis_nilai)
-$q_cek = mysqli_query($koneksi, "SELECT * FROM kuis_nilai WHERE IDKuis='$id_kuis' AND IDSiswa='$id_siswa'");
-if(mysqli_num_rows($q_cek) == 0) {
-    // Siswa baru pertama kali mulai klik
+// 3. Kalkulasi Durasi / Waktu Mulai
+$q_nilai = mysqli_query($koneksi, "SELECT WaktuMulai FROM kuis_nilai WHERE IDKuis='$id_kuis' AND IDSiswa='$id_siswa'");
+if(mysqli_num_rows($q_nilai) > 0) {
+    $d_nilai = mysqli_fetch_assoc($q_nilai);
+    $waktu_mulai = strtotime($d_nilai['WaktuMulai']);
+} else {
+    // Baru pertama mulai
     mysqli_query($koneksi, "INSERT INTO kuis_nilai (IDKuis, IDSiswa, WaktuMulai) VALUES ('$id_kuis', '$id_siswa', NOW())");
     $waktu_mulai = time();
-} else {
-    $data_nilai = mysqli_fetch_assoc($q_cek);
-    if(!is_null($data_nilai['WaktuSelesai'])) {
-        die("<script>alert('Kamu sudah menyelesaikan ujian ini!'); window.location='siswa.php';</script>");
-    }
-    $waktu_mulai = strtotime($data_nilai['WaktuMulai']);
 }
 
-// Hitung Sisa Detik
 $durasi_detik = $kuis['DurasiMenit'] * 60;
 $waktu_berjalan = time() - $waktu_mulai;
 $sisa_detik = $durasi_detik - $waktu_berjalan;
@@ -98,7 +88,13 @@ $total_soal = count($semua_soal);
         /* OPSI JAWABAN */
         .opsi-label { display: flex; align-items: center; padding: 12px 20px; border: 2px solid #e2e8f0; border-radius: 10px; cursor: pointer; transition: 0.2s; margin-bottom: 10px; font-weight: 500; color: #475569;}
         .opsi-label:hover { background: #f1f5f9; border-color: #cbd5e1; }
+        
+        /* Warna latar & garis saat opsi dipilih */
         .opsi-input:checked + .opsi-label { border-color: var(--primary); background: #e0e7ff; color: var(--primary); box-shadow: 0 4px 10px rgba(79,70,229,0.1); }
+        
+        /* Logika Cerdas Ikon: Sembunyikan yang kosong, munculkan yang BENAR saja */
+        .opsi-input:checked + .opsi-label .uncheck-icon { display: none !important; }
+        .opsi-input:checked + .opsi-label .check-icon:not(.d-none) { display: inline-block !important; }
         
         /* FITUR RAGU-RAGU */
         .ragu-box { display: flex; align-items: center; gap: 10px; background: #fffbeb; border: 1px solid #fde68a; padding: 10px 20px; border-radius: 8px; cursor: pointer; user-select: none; width: max-content;}
@@ -121,20 +117,22 @@ $total_soal = count($semua_soal);
 </head>
 <body>
 
-    <nav class="navbar navbar-exam fixed-top py-3">
-        <div class="container d-flex justify-content-between align-items-center">
+    <nav class="navbar navbar-expand-lg navbar-exam fixed-top py-3">
+        <div class="container-fluid px-4 d-flex justify-content-between align-items-center">
             <div>
-                <h5 class="mb-0 fw-bold text-dark text-truncate" style="max-width: 300px;"><i class="bi bi-journal-text text-primary me-2"></i><?= htmlspecialchars($kuis['Judul']) ?></h5>
-                <span class="small text-muted d-none d-md-block">Peserta: <?= htmlspecialchars($siswa['NamaSiswa']) ?></span>
+                <h5 class="fw-bold text-dark mb-0 d-flex align-items-center"><i class="bi bi-journal-text text-primary fs-3 me-2"></i> <?= htmlspecialchars($kuis['Judul']) ?></h5>
+                <div class="text-secondary small mt-1">Peserta: <strong class="text-dark"><?= htmlspecialchars($nama_siswa) ?></strong></div>
             </div>
-            <div class="timer-box" id="timerDisplay">
-                <i class="bi bi-alarm-fill"></i> <span id="timeText">--:--:--</span>
+            <div id="timer-display" class="timer-box">
+                <i class="bi bi-alarm-fill"></i> <span id="time-text">--:--:--</span>
             </div>
         </div>
     </nav>
 
-    <div class="container mb-5">
-        <form id="formUjian" action="simpan_jawaban_quiz.php" method="POST">
+    <div class="container-fluid px-4 py-4">
+        
+        <form id="formKuis" action="simpan_jawaban_quiz.php" method="POST">
+            <input type="hidden" name="id_mapel" value="<?= $id_mapel ?>">
             <input type="hidden" name="id_kuis" value="<?= $id_kuis ?>">
             <input type="hidden" name="durasi_terpakai" id="inputDurasiTerpakai" value="0">
             
@@ -161,7 +159,7 @@ $total_soal = count($semua_soal);
                         }
                     ?>
                         
-                        <div class="question-card" id="soal-<?= $no ?>">
+                        <div class="question-card card-soal" id="soal-<?= $no ?>">
                             <div class="d-flex gap-3 align-items-start mb-3">
                                 <div class="q-number"><?= $no ?></div>
                                 <div class="flex-grow-1">
@@ -174,7 +172,6 @@ $total_soal = count($semua_soal);
 
                             <div class="ps-md-5">
                                 <?php 
-                                // RENDER OPSI JAWABAN BERDASARKAN TIPE
                                 if(in_array($tipe, ['pilgan', 'checkbox'])): 
                                     $opsi_list = $semua_opsi[$id_s] ?? [];
                                     $input_type = ($tipe == 'pilgan') ? 'radio' : 'checkbox';
@@ -217,41 +214,47 @@ $total_soal = count($semua_soal);
                                 </label>
                             </div>
                         </div>
-
+                    
                     <?php 
                         $no++;
                     endforeach; 
-                    echo "</div>"; // Tutup div halaman terakhir
+                    if($total_soal > 0) echo "</div>"; // Tutup div halaman terakhir
                     ?>
 
-                    <div class="bottom-nav">
-                        <button type="button" class="btn btn-outline-secondary btn-page" id="btnPrev" onclick="gantiHalaman(-1)" style="visibility: hidden;"><i class="bi bi-arrow-left me-2"></i> Sebelumnya</button>
-                        <span class="fw-bold text-muted" id="pageIndicator">Halaman 1 dari <?= $total_halaman ?></span>
-                        <button type="button" class="btn btn-primary btn-page" id="btnNext" onclick="gantiHalaman(1)">Selanjutnya <i class="bi bi-arrow-right ms-2"></i></button>
+                    <div class="d-flex justify-content-between align-items-center mt-4 p-3 bg-white border rounded shadow-sm">
+                        <button type="button" id="btn-prev" class="btn btn-outline-primary px-4 fw-bold" onclick="prevPage()">
+                            <i class="bi bi-arrow-left me-1"></i> Sebelumnya
+                        </button>
+                        
+                        <span id="page-indicator" class="fw-bold text-secondary">Halaman 1 dari <?= $total_halaman ?></span>
+                        
+                        <button type="button" id="btn-next" class="btn btn-primary px-4 fw-bold" onclick="nextPage()">
+                            Selanjutnya <i class="bi bi-arrow-right ms-1"></i>
+                        </button>
                     </div>
 
                 </div>
 
                 <div class="col-lg-4">
                     <div class="nav-grid-card">
-                        <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                        <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-3">
                             <h6 class="fw-bold text-dark mb-0"><i class="bi bi-grid-3x3-gap-fill text-primary me-2"></i> Peta Soal</h6>
-                            <span class="badge bg-light text-dark border"><?= $total_soal ?> Soal</span>
+                            <span class="badge bg-light text-secondary border"><?= $total_soal ?> Soal</span>
                         </div>
                         
                         <div class="nav-grid mb-4">
                             <?php for($i=1; $i<=$total_soal; $i++): ?>
-                                <button type="button" class="btn-nav-soal <?= $i==1 ? 'active' : '' ?>" id="nav-btn-<?= $i ?>" onclick="lompatKeSoal(<?= $i ?>)"><?= $i ?></button>
+                                <button type="button" class="btn btn-nav-soal" id="nav-btn-<?= $i ?>" onclick="lompatKeSoal(<?= $i ?>)"><?= $i ?></button>
                             <?php endfor; ?>
                         </div>
-                        
+        
                         <div class="d-flex flex-wrap gap-2 mb-4" style="font-size: 0.8rem;">
                             <div class="d-flex align-items-center"><span class="badge bg-success d-inline-block me-1" style="width:15px; height:15px;"></span> Dijawab</div>
                             <div class="d-flex align-items-center"><span class="badge bg-warning d-inline-block me-1" style="width:15px; height:15px;"></span> Ragu-ragu</div>
                             <div class="d-flex align-items-center"><span class="badge bg-white border d-inline-block me-1" style="width:15px; height:15px;"></span> Kosong</div>
                         </div>
 
-                        <button type="button" class="btn btn-success w-100 fw-bold py-3 rounded-pill shadow-sm" onclick="konfirmasiSelesai()">
+                        <button type="submit" class="btn btn-success w-100 fw-bold py-3 rounded-pill shadow-sm">
                             <i class="bi bi-send-check-fill me-2"></i> Serahkan Ujian
                         </button>
                     </div>
@@ -266,160 +269,161 @@ $total_soal = count($semua_soal);
     
     <script>
         // ==========================================
-        // 1. SISTEM TIMER UJIAN
+        // 1. FITUR COUNTDOWN TIMER
         // ==========================================
-        let sisaDetik = <?= $sisa_detik ?>;
-        const timerDisplay = document.getElementById('timerDisplay');
-        const timeText = document.getElementById('timeText');
-        const inputDurasi = document.getElementById('inputDurasiTerpakai');
-        const totalDurasiDetik = <?= $durasi_detik ?>;
+        let sisaWaktu = <?= $sisa_detik ?>;
+        const durasiAwal = <?= $durasi_detik ?>;
+        const timeText = document.getElementById('time-text');
+        const timerBox = document.getElementById('timer-display');
+        const inputDurasiTerpakai = document.getElementById('inputDurasiTerpakai');
 
         function updateTimer() {
-            if (sisaDetik <= 0) {
-                timeText.innerHTML = "WAKTU HABIS!";
-                clearInterval(timerInterval);
+            if(sisaWaktu <= 0) {
+                clearInterval(intervalTimer);
+                timeText.innerText = "00:00:00";
                 Swal.fire({
-                    title: 'Waktu Habis!',
-                    text: 'Sistem akan otomatis menyimpan dan menyerahkan jawabanmu.',
-                    icon: 'warning',
-                    allowOutsideClick: false,
-                    showConfirmButton: false,
-                    timer: 3000
+                    title: 'Waktu Habis!', text: 'Sistem akan otomatis mengirimkan jawabanmu.', icon: 'warning',
+                    allowOutsideClick: false, showConfirmButton: false, timer: 3000
                 }).then(() => {
-                    document.getElementById('formUjian').submit();
+                    document.getElementById('formKuis').dispatchEvent(new Event('submit'));
                 });
                 return;
             }
 
-            const jam = Math.floor(sisaDetik / 3600);
-            const menit = Math.floor((sisaDetik % 3600) / 60);
-            const detik = sisaDetik % 60;
-            
-            timeText.innerHTML = `${String(jam).padStart(2, '0')}:${String(menit).padStart(2, '0')}:${String(detik).padStart(2, '0')}`;
-            
-            // Catat durasi terpakai untuk laporan guru
-            inputDurasi.value = totalDurasiDetik - sisaDetik;
+            let jam = Math.floor(sisaWaktu / 3600);
+            let menit = Math.floor((sisaWaktu % 3600) / 60);
+            let detik = sisaWaktu % 60;
 
-            if(sisaDetik < 300) { // Sisa 5 menit warna jadi oranye
-                timerDisplay.classList.add('warning');
+            jam = jam < 10 ? '0'+jam : jam;
+            menit = menit < 10 ? '0'+menit : menit;
+            detik = detik < 10 ? '0'+detik : detik;
+
+            timeText.innerText = `${jam}:${menit}:${detik}`;
+            
+            inputDurasiTerpakai.value = durasiAwal - sisaWaktu;
+
+            if(sisaWaktu < 300) { // 5 Menit terakhir
+                timerBox.classList.remove('bg-ef4444');
+                timerBox.classList.add('warning');
             }
 
-            sisaDetik--;
+            sisaWaktu--;
         }
-        const timerInterval = setInterval(updateTimer, 1000);
+
+        const intervalTimer = setInterval(updateTimer, 1000);
         updateTimer();
 
         // ==========================================
-        // 2. SISTEM PAGINATION (HALAMAN)
+        // 2. FITUR UPDATE WARNA PETA SOAL
         // ==========================================
-        let currentPage = 1;
-        const totalPages = <?= $total_halaman ?>;
-        const soalPerHalaman = <?= $soal_per_halaman ?>;
-
-        function gantiHalaman(step) {
-            document.getElementById(`page-${currentPage}`).classList.remove('active-page');
-            currentPage += step;
-            document.getElementById(`page-${currentPage}`).classList.add('active-page');
-            
-            updatePaginatorUI();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        function updatePaginatorUI() {
-            document.getElementById('btnPrev').style.visibility = (currentPage === 1) ? 'hidden' : 'visible';
-            document.getElementById('btnNext').style.visibility = (currentPage === totalPages) ? 'hidden' : 'visible';
-            document.getElementById('pageIndicator').innerText = `Halaman ${currentPage} dari ${totalPages}`;
-        }
-
-        function lompatKeSoal(nomor) {
-            // Tentukan soal ini ada di halaman berapa
-            const targetPage = Math.ceil(nomor / soalPerHalaman);
-            if(targetPage !== currentPage) {
-                document.getElementById(`page-${currentPage}`).classList.remove('active-page');
-                currentPage = targetPage;
-                document.getElementById(`page-${currentPage}`).classList.add('active-page');
-                updatePaginatorUI();
-            }
-
-            // Ganti border highlight di navigasi
-            document.querySelectorAll('.btn-nav-soal').forEach(btn => btn.classList.remove('active'));
-            document.getElementById(`nav-btn-${nomor}`).classList.add('active');
-
-            // Scroll mulus ke soal tujuan
-            document.getElementById(`soal-${nomor}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-
-        // ==========================================
-        // 3. WARNA NAVIGASI & AUTO-SAVE LOKAL
-        // ==========================================
-        const idKuis = "<?= $id_kuis ?>";
-        
-        // Event Listener untuk semua input jawaban
-        document.querySelectorAll('.jawaban-trigger').forEach(input => {
-            input.addEventListener('change', function() {
-                const no = this.getAttribute('data-no');
-                updateWarnaNav(no);
-                simpanKeLokal(); // Auto save
-            });
-            input.addEventListener('keyup', function() { // Khusus untuk text/textarea
-                const no = this.getAttribute('data-no');
-                updateWarnaNav(no);
-                simpanKeLokal();
-            });
-        });
-
-        function toggleRagu(checkbox, no) {
+        function updateWarnaNav(no) {
             const btnNav = document.getElementById(`nav-btn-${no}`);
-            if(checkbox.checked) {
+            const questionCard = document.getElementById(`soal-${no}`);
+            
+            if(!btnNav || !questionCard) return;
+
+            let isDijawab = false;
+            
+            // Cek Radio & Checkbox
+            const inputs = questionCard.querySelectorAll('input[type="radio"], input[type="checkbox"]:not(.ragu-checkbox)');
+            inputs.forEach(inp => { if(inp.checked) isDijawab = true; });
+
+            // Cek Teks & Dropdown
+            const textInputs = questionCard.querySelectorAll('input[type="text"], textarea, select');
+            textInputs.forEach(inp => { if(inp.value.trim() !== '') isDijawab = true; });
+
+            const isRagu = questionCard.querySelector('.ragu-checkbox').checked;
+
+            btnNav.classList.remove('answered', 'doubt');
+            
+            if(isRagu) {
                 btnNav.classList.add('doubt');
-            } else {
-                btnNav.classList.remove('doubt');
-                updateWarnaNav(no); // kembalikan ke warna hijau jika sudah diisi
+            } else if(isDijawab) {
+                btnNav.classList.add('answered');
             }
+        }
+
+        function toggleRagu(checkboxEle, no) {
+            updateWarnaNav(no);
             simpanKeLokal();
         }
 
-        function updateWarnaNav(no) {
-            const btnNav = document.getElementById(`nav-btn-${no}`);
-            if(btnNav.classList.contains('doubt')) return; // Jangan timpa jika sedang ragu
+        function lompatKeSoal(no) {
+            // Hitung soal ini ada di halaman berapa
+            const targetPage = Math.ceil(no / questionsPerPage);
+            
+            // Ganti halaman jika diperlukan
+            if(targetPage !== currentPage) {
+                currentPage = targetPage;
+                renderPagination();
+            }
 
-            // Cek apakah soal ini punya jawaban yang terisi
-            const inputs = document.querySelectorAll(`.jawaban-trigger[data-no="${no}"]`);
-            let isFilled = false;
+            // Hapus animasi 'active' dari semua tombol nav
+            document.querySelectorAll('.btn-nav-soal').forEach(b => b.classList.remove('active'));
+            document.getElementById(`nav-btn-${no}`).classList.add('active');
 
-            inputs.forEach(inp => {
-                if(inp.type === 'radio' || inp.type === 'checkbox') {
-                    if(inp.checked) isFilled = true;
+            // Scroll ke soal
+            const targetCard = document.getElementById(`soal-${no}`);
+            const y = targetCard.getBoundingClientRect().top + window.scrollY - 150;
+            window.scrollTo({top: y, behavior: 'smooth'});
+        }
+
+        // ==========================================
+        // 3. FITUR PAGINASI SOAL (MAX 10 PER HALAMAN)
+        // ==========================================
+        const questionsPerPage = 10;
+        const questionCards = document.querySelectorAll('.card-soal'); 
+        const totalPages = Math.ceil(questionCards.length / questionsPerPage);
+        let currentPage = 1;
+
+        function renderPagination() {
+            document.querySelectorAll('.question-container').forEach((container, index) => {
+                if (index === currentPage - 1) {
+                    container.classList.add('active-page');
                 } else {
-                    if(inp.value.trim() !== '') isFilled = true;
+                    container.classList.remove('active-page');
                 }
             });
 
-            if(isFilled) {
-                btnNav.classList.add('answered');
-                
-                // Ubah icon radio buatan jadi tercentang (UI Kosmetik)
-                const card = document.getElementById(`soal-${no}`);
-                if(card) {
-                    card.querySelectorAll('.uncheck-icon').forEach(i => i.style.display = 'inline-block');
-                    card.querySelectorAll('.check-icon').forEach(i => i.style.display = 'none');
-                    const checkedInput = card.querySelector('input:checked');
-                    if(checkedInput) {
-                        const label = checkedInput.nextElementSibling;
-                        label.querySelector('.uncheck-icon').style.display = 'none';
-                        label.querySelector('.check-icon').style.display = 'inline-block';
-                    }
-                }
-            } else {
-                btnNav.classList.remove('answered');
+            document.getElementById('page-indicator').innerText = `Halaman ${currentPage} dari ${totalPages}`;
+            
+            const btnPrev = document.getElementById('btn-prev');
+            const btnNext = document.getElementById('btn-next');
+
+            if(btnPrev) btnPrev.style.display = currentPage === 1 ? 'none' : 'inline-block';
+            if(btnNext) btnNext.style.display = currentPage === totalPages ? 'none' : 'inline-block';
+        }
+
+        function nextPage() {
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderPagination();
+                window.scrollTo({top: 0, behavior: 'smooth'});
             }
         }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                renderPagination();
+                window.scrollTo({top: 0, behavior: 'smooth'});
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if(questionCards.length > 0) renderPagination();
+        });
 
         // ==========================================
         // 4. FITUR AUTO-SAVE KE LOCALSTORAGE BROWSER
         // ==========================================
+        const idKuis = "<?= $id_kuis ?>"; 
+
         function simpanKeLokal() {
-            const formData = new FormData(document.getElementById('formUjian'));
+            const formElement = document.getElementById('formUjian') || document.getElementById('formKuis');
+            if(!formElement) return;
+
+            const formData = new FormData(formElement);
             const dataObj = {};
             for (let [key, value] of formData.entries()) {
                 if(dataObj[key]) {
@@ -430,7 +434,6 @@ $total_soal = count($semua_soal);
                 }
             }
             
-            // Simpan state ragu-ragu
             const raguStates = {};
             document.querySelectorAll('.ragu-checkbox').forEach((cb, idx) => {
                 if(cb.checked) raguStates[idx + 1] = true;
@@ -464,65 +467,101 @@ $total_soal = count($semua_soal);
                     }
                 }
 
-                // Pulihkan Ragu-ragu
                 if(dataObj['ragu_states']) {
                     const ragus = dataObj['ragu_states'];
                     document.querySelectorAll('.ragu-checkbox').forEach((cb, idx) => {
                         const no = idx + 1;
                         if(ragus[no]) {
                             cb.checked = true;
-                            toggleRagu(cb, no);
+                            if(typeof toggleRagu === "function") toggleRagu(cb, no); 
                         }
                     });
                 }
 
-                // Warnai nav
-                for(let i=1; i<=<?= $total_soal ?>; i++) { updateWarnaNav(i); }
+                if(typeof updateWarnaNav === "function") {
+                    for(let i=1; i<=<?= $total_soal ?>; i++) { updateWarnaNav(i); }
+                }
             }
         }
         
-        // Panggil pemulihan saat halaman termuat
+        // SENSOR PENYIMPANAN: Panggil simpanKeLokal tiap kali siswa nge-klik atau ngetik
+        document.querySelectorAll('input, select, textarea').forEach(input => {
+            input.addEventListener('change', function() {
+                simpanKeLokal(); 
+                if(this.dataset && this.dataset.no) {
+                    updateWarnaNav(this.dataset.no);
+                }
+            });
+            
+            if((input.tagName === 'INPUT' && input.type === 'text') || input.tagName === 'TEXTAREA') {
+                input.addEventListener('keyup', function() {
+                    simpanKeLokal();
+                    if(this.dataset && this.dataset.no) {
+                        updateWarnaNav(this.dataset.no);
+                    }
+                });
+            }
+        });
+
         pulihkanDariLokal();
 
         // ==========================================
-        // 5. KONFIRMASI SEBELUM SUBMIT
+        // 5. FITUR POP-UP & SUBMIT AJAX SWEETALERT
         // ==========================================
-        function konfirmasiSelesai() {
-            // Cek apakah ada yang masih ragu atau kosong
-            const totalSoal = <?= $total_soal ?>;
-            let terjawab = document.querySelectorAll('.btn-nav-soal.answered').length;
-            let ragu = document.querySelectorAll('.btn-nav-soal.doubt').length;
-            
-            // Note: yang ragu tapi sudah dijawab tetap dihitung 'answered' secara logika HTML kita jika check warna hijau ditimpa kuning
-            // Mari kita hitung ulang berdasarkan input murni
-            let kosong = 0;
-            for(let i=1; i<=totalSoal; i++) {
-                const nav = document.getElementById(`nav-btn-${i}`);
-                if(!nav.classList.contains('answered') && !nav.classList.contains('doubt')) kosong++;
-            }
-
-            let pesan = "Pastikan semua soal telah dijawab dengan yakin.";
-            if(kosong > 0 || ragu > 0) {
-                pesan = `<span class="text-danger fw-bold">Peringatan:</span> Ada <b>${kosong}</b> soal belum dijawab dan <b>${ragu}</b> soal masih ragu-ragu. Yakin ingin menyerahkan?`;
-            }
+        document.getElementById('formKuis').addEventListener('submit', function(e) {
+            e.preventDefault(); 
 
             Swal.fire({
                 title: 'Serahkan Ujian?',
-                html: pesan,
-                icon: 'question',
+                text: 'Pastikan kamu sudah memeriksa semua jawaban. Tindakan ini tidak bisa dibatalkan!',
+                icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: '#10b981',
-                cancelButtonColor: '#cbd5e1',
-                confirmButtonText: 'Ya, Serahkan!',
-                cancelButtonText: 'Cek Kembali',
+                confirmButtonColor: '#10b981', 
+                cancelButtonColor: '#cbd5e1', 
+                confirmButtonText: '<i class="bi bi-send-fill me-1"></i> Ya, Serahkan!',
+                cancelButtonText: 'Cek Lagi',
                 reverseButtons: true
             }).then((result) => {
                 if (result.isConfirmed) {
-                    localStorage.removeItem(`ujian_terakhir_${idKuis}`); // Bersihkan memori lokal
-                    document.getElementById('formUjian').submit();
+                    
+                    Swal.fire({
+                        title: 'Menyimpan Jawaban...',
+                        html: 'Tunggu sebentar, jangan tutup halaman ini.',
+                        allowOutsideClick: false,
+                        didOpen: () => { Swal.showLoading(); }
+                    });
+
+                    const formData = new FormData(this);
+                    fetch('simpan_jawaban_quiz.php', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if(data.status === 'sukses') {
+                            // Hapus Auto-Save dari browser
+                            localStorage.removeItem('ujian_terakhir_' + idKuis);
+                            
+                            Swal.fire({
+                                title: 'Ujian Selesai! 🎉',
+                                text: 'Jawabanmu berhasil dikirim ke guru.',
+                                icon: 'success',
+                                confirmButtonColor: '#4f46e5',
+                                allowOutsideClick: false
+                            }).then(() => {
+                                window.location.href = `mapel.php?id_mapel=${data.id_mapel}#itemKuis${data.id_kuis}`;
+                            });
+                        } else {
+                            Swal.fire('Gagal!', data.pesan || 'Terjadi kesalahan.', 'error');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        Swal.fire('Error Koneksi', 'Sistem gagal menghubungi server. Cek internetmu.', 'error');
+                    });
                 }
             });
-        }
+        });
     </script>
 </body>
 </html>
