@@ -16,6 +16,7 @@ if(empty($id_mapel)){ header("Location: siswa.php"); exit; }
 $query_siswa = mysqli_query($koneksi, "SELECT * FROM siswa WHERE IDUser='$id_user'");
 $siswa = mysqli_fetch_assoc($query_siswa);
 $id_siswa = $siswa['IDSiswa'] ?? '';
+$kelas_siswa = $siswa['Kelas'] ?? '';
 $nama_lengkap = $siswa['Nama'] ?? $siswa['NamaSiswa'] ?? 'Siswa';
 
 // 2. Ambil Data Mapel
@@ -28,8 +29,8 @@ $query_mapel = mysqli_query($koneksi, "
 if(mysqli_num_rows($query_mapel) == 0){ header("Location: siswa.php"); exit; }
 $mapel = mysqli_fetch_assoc($query_mapel);
 
-// 3. Ambil Daftar Topik/Bab
-$q_topik = mysqli_query($koneksi, "SELECT * FROM topik_mapel WHERE IDMapel = '$id_mapel' ORDER BY Urutan ASC");
+// 3. Ambil Daftar Topik/Bab (SUDAH DIKUNCI BERDASARKAN KELAS)
+$q_topik = mysqli_query($koneksi, "SELECT * FROM topik_mapel WHERE IDMapel = '$id_mapel' AND Kelas = '$kelas_siswa' ORDER BY Urutan ASC");
 $daftar_topik = [];
 while($t = mysqli_fetch_assoc($q_topik)) { $daftar_topik[] = $t; }
 
@@ -193,7 +194,7 @@ function hitungWaktuTersisa($deadline_str, $tgl_kumpul_str = null) {
                             <span class="text-truncate" style="max-width: 190px;"><?= htmlspecialchars($tp['NamaTopik']) ?></span>
                         </button>
                     </h2>
-                    <div id="sideCollapse<?= $id_tp ?>" class="accordion-collapse collapse" data-bs-parent="#accordionSidebar">
+                    <div id="sideCollapse<?= $id_tp ?>" class="accordion-collapse collapse">
                         <div class="accordion-body p-0 pb-2">
                             <?php 
                             $q_sm = mysqli_query($koneksi, "SELECT IDMateri, Judul FROM materi WHERE IDMapel='$id_mapel' AND IDTopik='$id_tp'");
@@ -267,20 +268,44 @@ function hitungWaktuTersisa($deadline_str, $tgl_kumpul_str = null) {
                             <?php 
                             // RENDER KUIS
                             $q_kuis = mysqli_query($koneksi, "SELECT * FROM kuis WHERE IDMapel='$id_mapel' AND IDTopik='$id_topik'");
-                            while($kq = mysqli_fetch_assoc($q_kuis)): $ada_konten = true; 
+                            while($kq = mysqli_fetch_assoc($q_kuis)): 
+                                $ada_konten = true; 
+                                $id_kuis_render = $kq['IDKuis'];
+                                
+                                $q_cek_nilai = mysqli_query($koneksi, "SELECT NilaiAkhir, WaktuSelesai FROM kuis_nilai WHERE IDKuis='$id_kuis_render' AND IDSiswa='$id_siswa'");
+                                $data_nilai = mysqli_fetch_assoc($q_cek_nilai);
+                                
+                                $sudah_dikerjakan = (!empty($data_nilai['WaktuSelesai'])) ? true : false;
+                                $nilai_siswa = $data_nilai['NilaiAkhir'] ?? 0;
+                                
+                                // PERUBAHAN: Karena status berubah jadi 'Draft' saat diumumkan oleh guru
+                                $tampilkan_nilai = ($kq['Status'] == 'Draft') ? true : false; 
                             ?>
                                 <div class="content-item" id="itemKuis<?= $kq['IDKuis'] ?>">
                                     <div class="d-flex align-items-center flex-grow-1">
                                         <div class="content-icon bg-warning bg-opacity-10 text-warning"><i class="bi bi-patch-question-fill"></i></div>
                                         <div class="content-info">
                                             <div class="content-title"><?= htmlspecialchars($kq['Judul']) ?></div>
-                                            <div class="small text-muted"><i class="bi bi-card-checklist me-1"></i> Evaluasi / Ujian</div>
+                                            <div class="small text-muted">
+                                                <i class="bi bi-card-checklist me-1"></i> Evaluasi / Ujian 
+                                                
+                                                <?php if($sudah_dikerjakan): ?>
+                                                    <?php if($tampilkan_nilai): ?>
+                                                        <span class="ms-2 badge bg-success">Skor: <?= $nilai_siswa ?>/100</span>
+                                                    <?php else: ?>
+                                                        <span class="ms-2 badge bg-secondary">Menunggu Penilaian Guru</span>
+                                                    <?php endif; ?>
+                                                <?php endif; ?>
+                                                
+                                            </div>
                                         </div>
                                     </div>
                                     
-                                    <button class="btn-selesai text-warning border-warning" onclick="konfirmasiKuis('<?= $kq['IDKuis'] ?>', '<?= addslashes(htmlspecialchars($kq['Judul'])) ?>')">
-                                        <i class="bi bi-play-circle-fill me-1"></i> Mulai Ujian
-                                    </button>
+                                    <?php if($sudah_dikerjakan): ?>
+                                        <button class="btn-selesai done" disabled style="opacity: 1;"><i class="bi bi-check-circle-fill me-1"></i> Selesai</button>
+                                    <?php else: ?>
+                                        <button class="btn-selesai text-warning border-warning" onclick="konfirmasiKuis('<?= $kq['IDKuis'] ?>', '<?= addslashes(htmlspecialchars($kq['Judul'])) ?>')"><i class="bi bi-play-circle-fill me-1"></i> Mulai Ujian</button>
+                                    <?php endif; ?>
                                 </div>
                             <?php endwhile; ?>
 
