@@ -599,9 +599,13 @@ document.addEventListener("DOMContentLoaded", function() {
         mapelInfo.kelas.forEach(kls => {
             // Jika diklik dari Aksi Cepat (kelasUtama kosong), maka centang semua kelas secara default
             const isChecked = (kls === kelasUtama || kelasUtama === '') ? 'checked' : '';
+            
+            // PERBAIKAN: Pisahkan nama variabel khusus untuk kuis agar bisa dibaca oleh buat_quiz.php
+            const nameAttr = (jenis === 'kuis') ? 'kelas_pilih[]' : 'kelas[]';
+            
             htmlCb += `
                 <div class="form-check form-switch fs-6">
-                    <input class="form-check-input border-secondary" type="checkbox" name="kelas[]" value="${kls}" id="${jenis}_${kls.replace(/\s+/g, '')}" ${isChecked} style="cursor: pointer;">
+                    <input class="form-check-input border-secondary" type="checkbox" name="${nameAttr}" value="${kls}" id="${jenis}_${kls.replace(/\s+/g, '')}" ${isChecked} style="cursor: pointer;">
                     <label class="form-check-label fw-bold text-dark" for="${jenis}_${kls.replace(/\s+/g, '')}" style="cursor: pointer;">${kls}</label>
                 </div>
             `;
