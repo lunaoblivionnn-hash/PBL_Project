@@ -60,8 +60,38 @@ while($t = mysqli_fetch_assoc($q_topik_all)) { $daftar_topik[] = $t; }
     <style>
         :root { --primary: #4f46e5; --primary-light: #eef2ff; --sidebar-width: 280px; }
         body { background-color: #f8fafc; overflow-x: hidden; font-family: 'Segoe UI', system-ui, sans-serif; }
-        .navbar-custom { background: #fff; border-bottom: 1px solid #e5e7eb; z-index: 1030; }
-        .btn-toggle { font-size: 1.5rem; color: #4b5563; background: transparent; border: none; padding: 0 15px; }
+        /* NAVBAR PEKAT SESUAI GAMBAR CONTOH */
+        .navbar-custom { 
+            background-color: #4f46e5 !important; /* Warna biru gelap pekat slate/navy */
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08); 
+            z-index: 1030; 
+            border-bottom: 1px solid #4f46e5;
+        }
+
+        /* KUSTOMISASI TOMBOL DASHBOARD DI NAVBAR */
+        .btn-nav-back {
+            color: rgba(255, 255, 255, 0.9) !important; /* Warna tulisan putih bersih */
+            border: 1px solid rgba(255, 255, 255, 0.4) !important; /* Garis tepi putih semi-transparan agar elegan */
+            background: transparent;
+            transition: all 0.2s ease-in-out;
+        }
+
+        /* EFEK HOVER: Saat kursor menyentuh tombol */
+        .btn-nav-back:hover {
+            color: #1e293b !important; /* Teks berubah jadi gelap pekat saat di-hover */
+            background-color: #ffffff !important; /* Background tombol berubah jadi putih solid */
+            border-color: #ffffff !important; /* Garis tepi ikut menyatu jadi putih */
+            box-shadow: 0 4px 10px rgba(255, 255, 255, 0.15); /* Efek kilau cahaya tipis */
+        }
+        
+        /* Pastikan tombol list/hamburger di navbar warnanya putih solid agar kontras */
+        .btn-toggle { 
+            font-size: 1.5rem; 
+            color: #ffffff !important; 
+            background: transparent; 
+            border: none; 
+            padding: 0 15px; 
+        }
         
         /* LAYOUT BERSAMA (WRAPPER & SIDEBAR BARU) */
         #wrapper { display: flex; width: 100%; align-items: stretch; min-height: calc(100vh - 60px); }
@@ -76,7 +106,8 @@ while($t = mysqli_fetch_assoc($q_topik_all)) { $daftar_topik[] = $t; }
         .desc-box { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; position: relative; }
         
         /* SECTION CARD BARU (Gaya Akordion) */
-        .section-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.02); overflow: hidden; }
+        .section-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.03); overflow: visible; /* PERBAIKAN DROPDOWN TERPOTONG */ }
+        .section-header { border-radius: 12px 12px 0 0; }
         .section-header { padding: 15px 20px; display: flex; align-items: center; justify-content: space-between; background: #fff; transition: 0.2s; }
         .section-header:hover { background: #f8fafc; }
         
@@ -122,9 +153,9 @@ while($t = mysqli_fetch_assoc($q_topik_all)) { $daftar_topik[] = $t; }
         <div class="container-fluid">
             <div class="d-flex align-items-center">
                 <button class="btn-toggle" id="sidebarToggle"><i class="bi bi-list"></i></button>
-                <a class="navbar-brand fw-bold ms-2 text-dark fs-5" href="#">LMS <span style="color: var(--primary);">Wongsorejo</span></a>
+                <a class="navbar-brand fw-bold ms-2 text-white fs-5" href="#">LMS <span class="text-warning">Wongsorejo</span></a>
             </div>
-            <a href="guru.php" class="btn btn-outline-secondary btn-sm rounded-pill fw-bold px-3"><i class="bi bi-arrow-left me-1"></i> Dashboard</a>
+            <a href="guru.php" class="btn btn-nav-back btn-sm rounded-pill fw-bold px-3"><i class="bi bi-arrow-left me-1"></i> Dashboard</a>
         </div>
     </nav>
 
@@ -134,10 +165,6 @@ while($t = mysqli_fetch_assoc($q_topik_all)) { $daftar_topik[] = $t; }
                 <span class="badge bg-primary bg-opacity-10 text-primary border border-primary w-100 py-2"><i class="bi bi-building me-1"></i> Kelas <?= htmlspecialchars($kelas) ?></span>
             </div>
             <div class="course-index-title mt-3">DAFTAR ISI KELAS</div>
-            <a href="#header-mapel" class="index-item active mb-3" onclick="setActiveSidebar(this)">
-                <i class="bi bi-info-square me-2"></i> Pengaturan Umum
-            </a>
-            
             <div class="accordion accordion-flush sidebar-accordion" id="accordionSidebar">
             <?php foreach($daftar_topik as $tp): 
                 $id_tp = $tp['IDTopik'];
@@ -227,7 +254,7 @@ while($t = mysqli_fetch_assoc($q_topik_all)) { $daftar_topik[] = $t; }
                             </li>
                             <li><hr class="dropdown-divider"></li>
                             <li>
-                                <a class="dropdown-item fw-semibold text-danger py-2" href="hapusTopik.php?id=<?= $id_topik ?>&id_mapel=<?= $id_mapel ?>&kelas=<?= urlencode($kelas) ?>" onclick="return confirm('Yakin ingin menghapus bab ini beserta seluruh materi dan tugas di dalamnya?')">
+                                <a class="dropdown-item fw-semibold text-danger py-2" href="javascript:void(0)" onclick="konfirmasiHapusTopik('<?= $id_topik ?>', '<?= addslashes(htmlspecialchars($nama_topik)) ?>')">
                                     <i class="bi bi-trash-fill me-2"></i> Hapus Bab
                                 </a>
                             </li>
@@ -275,7 +302,11 @@ while($t = mysqli_fetch_assoc($q_topik_all)) { $daftar_topik[] = $t; }
                                     <div class="d-flex justify-content-between align-items-center bg-light p-2 px-3 border rounded">
                                         <div class="small text-muted fw-semibold"><i class="bi bi-clock-history me-1"></i> Diunggah pada: <span class="text-dark"><?= date('d M Y, H:i', strtotime($mt['TanggalUpload'] ?? 'now')) ?> WIB</span></div>
                                         <div class="d-flex gap-2">
-                                            <button class="btn btn-sm btn-outline-primary fw-bold px-3 bg-white" onclick="alert('Nantinya ini akan membuka modal form Edit Materi!')">
+                                            <button class="btn btn-sm btn-outline-primary fw-bold px-3 bg-white" 
+                                                    data-id="<?= $mt['IDMateri'] ?>" 
+                                                    data-judul="<?= htmlspecialchars($mt['Judul']) ?>" 
+                                                    data-deskripsi="<?= htmlspecialchars($mt['Deskripsi']) ?>"
+                                                    onclick="bukaModalEditMateri(this)">
                                                 <i class="bi bi-pencil-square me-1"></i> Edit
                                             </button>
                                             <a href="../dokumen_materi/<?= htmlspecialchars($mt['Filepath']) ?>" class="btn btn-sm btn-primary fw-bold px-3" target="_blank" download>
@@ -499,6 +530,41 @@ while($t = mysqli_fetch_assoc($q_topik_all)) { $daftar_topik[] = $t; }
         </div>
     </div>
 
+    <div class="modal fade" id="modalEditMateri" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content rounded-4 border-0 shadow-lg">
+                <div class="modal-header bg-primary text-white border-0 p-4">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square me-2"></i>Edit Materi</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="Proses_Edit_Materi.php" method="POST" enctype="multipart/form-data">
+                    <div class="modal-body p-4 bg-light">
+                        <input type="hidden" name="id_mapel" value="<?= htmlspecialchars($id_mapel) ?>">
+                        <input type="hidden" name="kelas" value="<?= htmlspecialchars($kelas) ?>">
+                        <input type="hidden" name="id_materi" id="editMateriId">
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-secondary small">Judul Materi <span class="text-danger">*</span></label>
+                            <input type="text" name="judul" id="editMateriJudul" class="form-control" required maxlength="100">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-secondary small">Deskripsi Tambahan</label>
+                            <textarea name="deskripsi" id="editMateriDeskripsi" class="form-control" rows="3" maxlength="300"></textarea>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label fw-bold text-secondary small">Ganti File (Opsional)</label>
+                            <input type="file" name="materi_file" class="form-control" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.jpg,.jpeg,.png,.mp4">
+                            <div class="form-text small">Biarkan kosong jika tidak ingin mengganti file.</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0 p-3 bg-white">
+                        <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm">Simpan Perubahan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <div class="modal fade" id="modalBuatTugas" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content rounded-4 border-0 shadow-lg">
@@ -679,6 +745,25 @@ while($t = mysqli_fetch_assoc($q_topik_all)) { $daftar_topik[] = $t; }
         function showFileMateri(input) { const f = input.files[0]; if (!f) return; document.getElementById('namaFileMateri').textContent = f.name; document.getElementById('previewMateriBox').classList.remove('d-none'); document.getElementById('previewMateriBox').classList.add('d-flex'); document.getElementById('zoneMateri').classList.add('d-none'); }
         function clearFileMateri() { document.getElementById('fileMateri').value = ''; document.getElementById('previewMateriBox').classList.add('d-none'); document.getElementById('previewMateriBox').classList.remove('d-flex'); document.getElementById('zoneMateri').classList.remove('d-none'); }
 
+        // FUNGSI POP-UP KONFIRMASI HAPUS BAB
+        function konfirmasiHapusTopik(idTopik, namaTopik) {
+            Swal.fire({
+                title: 'Hapus Bab?',
+                html: `Yakin ingin menghapus bab <b>${namaTopik}</b>?<br><br><span class="text-danger small">Semua materi, tugas, dan ujian di dalamnya akan ikut terhapus permanen!</span>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#cbd5e1',
+                confirmButtonText: '<i class="bi bi-trash-fill me-1"></i> Ya, Hapus!',
+                cancelButtonText: 'Batal',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = `hapusTopik.php?id=${idTopik}&id_mapel=<?= urlencode($id_mapel) ?>&kelas=<?= urlencode($kelas) ?>`;
+                }
+            });
+        }
+        
         // Fungsi Highlight Sidebar Aktif
         function setActiveSidebar(element) {
             document.querySelectorAll('.index-item').forEach(el => el.classList.remove('active'));
@@ -850,9 +935,39 @@ while($t = mysqli_fetch_assoc($q_topik_all)) { $daftar_topik[] = $t; }
             
             new bootstrap.Modal(document.getElementById('modalPilihAktivitas')).show(); 
         }
+
+        function bukaModalEditMateri(btnElement) {
+            document.getElementById('editMateriId').value = btnElement.getAttribute('data-id');
+            document.getElementById('editMateriJudul').value = btnElement.getAttribute('data-judul');
+            document.getElementById('editMateriDeskripsi').value = btnElement.getAttribute('data-deskripsi');
+            new bootstrap.Modal(document.getElementById('modalEditMateri')).show();
+        }
     </script>
-    <?php if(isset($_GET['pesan']) || isset($_GET['status'])): ?>
-    <script>Swal.fire({ title: 'Berhasil!', icon: 'success', confirmButtonColor: '#4f46e5', timer: 2000, showConfirmButton: false }); window.history.replaceState(null, null, window.location.pathname + "?id_mapel=<?= urlencode($id_mapel) ?>&kelas=<?= urlencode($kelas) ?>");</script>
+    <?php if(isset($_GET['pesan'])): ?>
+    <script>
+        let pesan = "Tindakan berhasil dilakukan.";
+        const kodePesan = "<?= $_GET['pesan'] ?>";
+        
+        // Membaca kode pesan dari URL untuk menampilkan teks yang sesuai
+        if(kodePesan === 'deskripsi') pesan = "Pengantar / Deskripsi kelas berhasil diperbarui!";
+        else if(kodePesan === 'topik_tambah') pesan = "Bab/Section baru berhasil ditambahkan ke kelas!";
+        else if(kodePesan === 'topik_edit') pesan = "Judul Bab berhasil diperbarui!";
+        else if(kodePesan === 'topik_dihapus') pesan = "Bab beserta isinya berhasil dihapus bersih!";
+        else if(kodePesan === 'materi_diedit') pesan = "Data dan file materi berhasil diperbarui!";
+        
+        Swal.fire({ 
+            title: 'Berhasil!', 
+            text: pesan,
+            icon: 'success', 
+            confirmButtonColor: '#4f46e5', 
+            timer: 3500, 
+            showConfirmButton: true,
+            confirmButtonText: 'OK'
+        }); 
+        
+        // Menghapus parameter ?pesan=... dari URL agar pop-up tidak muncul terus saat direfresh
+        window.history.replaceState(null, null, window.location.pathname + "?id_mapel=<?= urlencode($id_mapel) ?>&kelas=<?= urlencode($kelas) ?>");
+    </script>
     <?php endif; ?>
 </body>
 </html>
