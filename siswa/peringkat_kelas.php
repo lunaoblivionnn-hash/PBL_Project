@@ -42,18 +42,29 @@ function getLevelInfo($xp, $levels) {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <style>
-        :root { --primary: #4f46e5; --text-dark: #1e293b; --text-muted: #64748b; }
+        :root { 
+            --primary: #1e1b4b;          
+            --primary-dark: #100f28;     
+            --primary-light: #e0e7ff;    
+            --secondary: #3b82f6;        
+            --gradient-primary: linear-gradient(135deg, #1e1b4b, #312e81);
+            --gradient-card: linear-gradient(135deg, #312e81, #1e1b4b);
+            --text-dark: #1e293b; 
+            --text-muted: #64748b; 
+        }
         body { background-color: #f8fafc; font-family: 'Segoe UI', system-ui, sans-serif; display: flex; flex-direction: column; min-height: 100vh;}
-        .navbar-custom { background: linear-gradient(135deg, #4f46e5, #0ea5e9) !important; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.2); padding: 10px 0; }
-        .sidebar { background-color: #fff; box-shadow: 2px 0 20px rgba(0,0,0,0.03); padding: 25px 15px; z-index: 100; min-height: calc(100vh - 70px); }
-        .sidebar .nav-link { color: var(--text-muted); font-weight: 600; padding: 12px 20px; border-radius: 12px; margin-bottom: 8px; transition: 0.3s; }
-        .sidebar .nav-link:hover { background-color: #f1f5f9; color: var(--primary); }
-        .breadcrumb-modern { font-size: 0.9rem; font-weight: 600; color: var(--text-muted); margin-bottom: 20px; }
-        .breadcrumb-modern a { color: var(--primary); text-decoration: none; }
         
-        /* Modifikasi Rank Card untuk Stretched-Link */
+        .navbar-custom { background: var(--gradient-primary) !important; box-shadow: 0 4px 20px rgba(30, 27, 75, 0.3); padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .sidebar { background-color: #fff; box-shadow: 4px 0 20px rgba(0,0,0,0.03); padding: 25px 15px; z-index: 100; min-height: calc(100vh - 70px); }
+        .sidebar .nav-link { color: var(--text-muted); font-weight: 600; padding: 12px 20px; border-radius: 12px; margin-bottom: 8px; transition: all 0.3s ease; }
+        .sidebar .nav-link:hover { background-color: #f8fafc; color: var(--secondary); transform: translateX(5px); }
+        .sidebar .nav-link.active { background-color: var(--primary-light); color: var(--primary); }
+
+        .breadcrumb-modern { font-size: 0.9rem; font-weight: 600; color: var(--text-muted); margin-bottom: 20px; }
+        .breadcrumb-modern a { color: var(--secondary); text-decoration: none; }
+        
         .rank-card { background: #fff; border-radius: 16px; padding: 20px 25px; display: flex; align-items: center; gap: 20px; border: 1px solid #e2e8f0; margin-bottom: 15px; transition: 0.2s; position: relative; cursor: pointer;}
-        .rank-card:hover { transform: translateY(-4px); box-shadow: 0 10px 25px rgba(79,70,229,0.1); border-color: var(--primary); }
+        .rank-card:hover { transform: translateY(-4px); box-shadow: 0 10px 25px rgba(30,27,75,0.1); border-color: var(--secondary); }
         
         .rank-number { width: 50px; font-size: 1.5rem; font-weight: 900; color: #cbd5e1; text-align: center; }
         .rank-1 .rank-number { color: #fbbf24; font-size: 2rem; text-shadow: 0 2px 5px rgba(251,191,36,0.3);}
@@ -67,33 +78,17 @@ function getLevelInfo($xp, $levels) {
         .search-box { position: relative; max-width: 400px; }
         .search-box i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
         .search-box input { padding-left: 45px; border-radius: 50px; background: #fff; border: 1px solid #cbd5e1; box-shadow: 0 4px 10px rgba(0,0,0,0.02); }
-        .search-box input:focus { border-color: var(--primary); box-shadow: 0 0 0 0.2rem rgba(79, 70, 229, 0.15); }
+        .search-box input:focus { border-color: var(--secondary); box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.15); }
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom sticky-top">
-        <div class="container-fluid px-4">
-            <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="siswa.php">
-                <i class="bi bi-mortarboard-fill fs-4"></i> LMS Wongsorejo
-            </a>
-            <div class="d-none d-lg-flex align-items-center gap-3">
-                <div class="text-end text-white">
-                    <h6 class="mb-0 fw-bold small"><?= $nama_lengkap ?></h6>
-                    <span class="badge bg-white bg-opacity-25 rounded-pill mt-1"><?= htmlspecialchars($kelas_siswa) ?></span>
-                </div>
-            </div>
-        </div>
-    </nav>
+    
+    <?php include 'komponen_navbar.php'; ?>
 
     <div class="container-fluid px-0 flex-grow-1">
         <div class="row g-0">
-            <nav class="col-md-3 col-lg-2 d-none d-md-block sidebar">
-                <div class="text-muted small fw-bold mb-3 px-3">MENU AKADEMIK</div>
-                <ul class="nav flex-column">
-                    <li class="nav-item"><a class="nav-link" href="siswa.php"><i class="bi bi-grid-1x2-fill me-3 fs-5"></i> Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link" href="kalender.php"><i class="bi bi-calendar2-week-fill me-3 fs-5"></i> Jadwal & Agenda</a></li>
-                </ul>
-            </nav>
+            
+            <?php include 'komponen_sidebar.php'; ?>
 
             <main class="col-md-9 ms-sm-auto col-lg-10 px-4 py-4 pb-5">
                 <div class="breadcrumb-modern">
@@ -105,8 +100,8 @@ function getLevelInfo($xp, $levels) {
                         <h2 class="fw-bold mb-1 text-dark d-flex align-items-center gap-2">
                             <i class="bi bi-trophy-fill text-warning"></i> Papan Peringkat
                         </h2>
-                        <div class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 border border-primary-subtle fw-bold" style="font-size: 0.9rem;">
-                            <i class="bi bi-buildings-fill me-1"></i> Kelas <?= htmlspecialchars($kelas_siswa) ?>
+                        <div class="badge bg-white text-secondary px-3 py-2 border shadow-sm fw-bold" style="font-size: 0.9rem;">
+                            <i class="bi bi-buildings-fill me-1 text-primary"></i> Kelas <?= htmlspecialchars($kelas_siswa) ?>
                         </div>
                     </div>
                     <div class="search-box w-100">
@@ -121,8 +116,10 @@ function getLevelInfo($xp, $levels) {
                     while($row = mysqli_fetch_assoc($q_rank)): 
                         $lvl_info = getLevelInfo($row['TotalPoint'], $master_levels);
                         $class_rank = ($no <= 3) ? 'rank-'.$no : '';
-                        $ava = !empty($row['FotoProfil']) ? "../uploads/profil/".htmlspecialchars($row['FotoProfil']) : "https://ui-avatars.com/api/?name=".urlencode($row['NamaSiswa'])."&background=random";
+                        $ava = !empty($row['FotoProfil']) ? "../uploads/profil/".htmlspecialchars($row['FotoProfil']) : "https://ui-avatars.com/api/?name=".urlencode($row['NamaSiswa'])."&background=e0e7ff&color=1e1b4b";
                         $bio = !empty($row['Bio']) ? htmlspecialchars($row['Bio']) : "Siswa yang rajin dan bersemangat.";
+                        
+                        // Menandai diri sendiri dengan highlight khusus
                         $is_me = ($row['IDSiswa'] == $siswa['IDSiswa']) ? 'bg-primary bg-opacity-10 border-primary' : '';
                     ?>
                         <div class="rank-card <?= $class_rank ?> <?= $is_me ?> user-row">
@@ -137,7 +134,7 @@ function getLevelInfo($xp, $levels) {
                                     </a>
                                 </h5>
                                 <div class="d-flex align-items-center gap-2 mt-1">
-                                    <span class="fw-bold text-primary fs-6"><?= $lvl_info['Gelar'] ?></span>
+                                    <span class="fw-bold text-secondary fs-6"><?= $lvl_info['Gelar'] ?></span>
                                     <span class="badge bg-dark text-warning small"><i class="bi bi-star-fill me-1"></i> Lv. <?= $lvl_info['Angka'] ?></span>
                                 </div>
                                 <p class="text-muted small mb-0 mt-1 text-truncate">"<?= $bio ?>"</p>
@@ -178,5 +175,6 @@ function getLevelInfo($xp, $levels) {
             document.getElementById('noData').classList.toggle('d-none', found);
         }
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
