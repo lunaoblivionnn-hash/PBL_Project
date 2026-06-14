@@ -31,6 +31,18 @@ if(empty($id_siswa) || empty($id_kuis)) {
     kirimRespon('error', 'Data identitas kuis atau siswa hilang.');
 }
 
+// -------------------------------------------------------------
+// PERBAIKAN: CARI ATAU BUAT 'IDNILAI' DULU SEBAGAI KUNCI UTAMA
+// -------------------------------------------------------------
+$q_cek_nilai = mysqli_query($koneksi, "SELECT IDNilai FROM kuis_nilai WHERE IDKuis='$id_kuis' AND IDSiswa='$id_siswa'");
+if(mysqli_num_rows($q_cek_nilai) > 0) {
+    $id_nilai = mysqli_fetch_assoc($q_cek_nilai)['IDNilai'];
+} else {
+    // Jika belum ada rekaman sama sekali, buat baru
+    mysqli_query($koneksi, "INSERT INTO kuis_nilai (IDKuis, IDSiswa, WaktuMulai) VALUES ('$id_kuis', '$id_siswa', NOW())");
+    $id_nilai = mysqli_insert_id($koneksi);
+}
+
 // =========================================================================
 // SISTEM PENILAIAN OTOMATIS & PEREKAMAN JAWABAN FISIK
 // =========================================================================
@@ -82,19 +94,17 @@ while($soal = mysqli_fetch_assoc($q_soal)) {
     $jawaban_simpan = is_array($jawaban_dikirim) ? implode(',', $jawaban_dikirim) : $jawaban_dikirim;
     $jawaban_simpan = mysqli_real_escape_string($koneksi, $jawaban_simpan ?? '');
     
-    mysqli_query($koneksi, "DELETE FROM kuis_jawaban WHERE IDKuis='$id_kuis' AND IDSiswa='$id_siswa' AND IDSoal='$id_soal'");
-    mysqli_query($koneksi, "INSERT INTO kuis_jawaban (IDKuis, IDSiswa, IDSoal, JawabanTeks, IsBenar) VALUES ('$id_kuis', '$id_siswa', '$id_soal', '$jawaban_simpan', '".($benar ? 1 : 0)."')");
+    $is_benar_val = $benar ? 1 : 0;
+    
+    // PERBAIKAN: Gunakan IDNilai (Bukan IDKuis dan IDSiswa lagi)
+    mysqli_query($koneksi, "DELETE FROM kuis_jawaban WHERE IDNilai='$id_nilai' AND IDSoal='$id_soal'");
+    mysqli_query($koneksi, "INSERT INTO kuis_jawaban (IDNilai, IDSoal, JawabanTeks, IsBenar) VALUES ('$id_nilai', '$id_soal', '$jawaban_simpan', '$is_benar_val')");
 }
 
 $nilai_akhir = ($total_poin_maksimal > 0) ? round(($poin_didapat / $total_poin_maksimal) * 100) : 0;
 
 // Simpan Total ke kuis_nilai
-$q_cek = mysqli_query($koneksi, "SELECT IDNilai FROM kuis_nilai WHERE IDKuis='$id_kuis' AND IDSiswa='$id_siswa'");
-if(mysqli_num_rows($q_cek) > 0) {
-    mysqli_query($koneksi, "UPDATE kuis_nilai SET NilaiAkhir='$nilai_akhir', Benar='$jumlah_benar', Salah='$jumlah_salah', WaktuSelesai=NOW() WHERE IDKuis='$id_kuis' AND IDSiswa='$id_siswa'");
-} else {
-    mysqli_query($koneksi, "INSERT INTO kuis_nilai (IDKuis, IDSiswa, NilaiAkhir, Benar, Salah, WaktuMulai, WaktuSelesai) VALUES ('$id_kuis', '$id_siswa', '$nilai_akhir', '$jumlah_benar', '$jumlah_salah', NOW(), NOW())");
-}
+mysqli_query($koneksi, "UPDATE kuis_nilai SET NilaiAkhir='$nilai_akhir', Benar='$jumlah_benar', Salah='$jumlah_salah', WaktuSelesai=NOW() WHERE IDNilai='$id_nilai'");
 
 kirimRespon('sukses', 'Ujian berhasil diselesaikan.', $id_mapel, $id_kuis);
 ?>
