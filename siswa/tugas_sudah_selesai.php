@@ -30,51 +30,43 @@ $query_tugas = mysqli_query($koneksi, "
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <style>
-        :root { --primary: #4f46e5; --primary-light: #e0e7ff; --text-dark: #1e293b; --text-muted: #64748b; }
+        :root { 
+            --primary: #1e1b4b;          
+            --primary-dark: #100f28;     
+            --primary-light: #e0e7ff;    
+            --secondary: #3b82f6;        
+            --gradient-primary: linear-gradient(135deg, #1e1b4b, #312e81);
+            --gradient-card: linear-gradient(135deg, #312e81, #1e1b4b);
+            --text-dark: #1e293b; 
+            --text-muted: #64748b; 
+        }
         body { background-color: #f8fafc; color: var(--text-dark); font-family: 'Segoe UI', system-ui, sans-serif; display: flex; flex-direction: column; min-height: 100vh;}
-        .navbar-custom { background: linear-gradient(135deg, #4f46e5, #0ea5e9) !important; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.2); padding: 10px 0; }
-        .sidebar { background-color: #fff; box-shadow: 2px 0 20px rgba(0,0,0,0.03); padding: 25px 15px; z-index: 100; min-height: calc(100vh - 70px); }
+        
+        .navbar-custom { background: var(--gradient-primary) !important; box-shadow: 0 4px 20px rgba(30, 27, 75, 0.3); padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .sidebar { background-color: #fff; box-shadow: 4px 0 20px rgba(0,0,0,0.03); padding: 25px 15px; z-index: 100; min-height: calc(100vh - 70px); }
         .sidebar .nav-link { color: var(--text-muted); font-weight: 600; padding: 12px 20px; border-radius: 12px; margin-bottom: 8px; transition: all 0.3s ease; }
-        .sidebar .nav-link:hover { background-color: #f1f5f9; color: var(--primary); transform: translateX(5px); }
+        .sidebar .nav-link:hover { background-color: #f8fafc; color: var(--secondary); transform: translateX(5px); }
+        .sidebar .nav-link.active { background-color: var(--primary-light); color: var(--primary); }
+
         .breadcrumb-modern { font-size: 0.9rem; font-weight: 600; color: var(--text-muted); margin-bottom: 15px; }
-        .breadcrumb-modern a { color: var(--primary); text-decoration: none; transition: 0.2s; }
+        .breadcrumb-modern a { color: var(--secondary); text-decoration: none; transition: 0.2s; }
         .breadcrumb-modern a:hover { text-decoration: underline; }
         
         .task-list-item { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 20px 25px; display: flex; align-items: center; gap: 20px; transition: 0.3s; margin-bottom: 15px; border-left: 5px solid #10b981; }
         .task-list-item:hover { transform: translateX(5px); box-shadow: 0 10px 20px rgba(0,0,0,0.03); border-color: #86efac; }
         .task-icon { width: 50px; height: 50px; border-radius: 12px; background: #f0fdf4; color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0; }
         .task-info { flex-grow: 1; }
-        .btn-go { background: #f0fdf4; color: #10b981; border: 1px solid #86efac; font-weight: 700; padding: 8px 20px; border-radius: 8px; transition: 0.3s; white-space: nowrap;}
+        .btn-go { background: #f0fdf4; color: #10b981; border: 1px solid #86efac; font-weight: 700; padding: 8px 20px; border-radius: 8px; transition: 0.3s; white-space: nowrap; text-decoration: none;}
         .btn-go:hover { background: #10b981; color: #fff; }
     </style>
 </head>
 <body>
 
-    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom sticky-top">
-        <div class="container-fluid px-4">
-            <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="siswa.php">
-                <i class="bi bi-mortarboard-fill fs-4"></i> LMS Wongsorejo
-            </a>
-            <div class="d-none d-lg-flex align-items-center gap-3">
-                <div class="text-end text-white">
-                    <h6 class="mb-0 fw-bold small text-nowrap" style="font-size: 1.1rem"><?= $nama_lengkap ?></h6>
-                    <span class="badge bg-white bg-opacity-25 rounded-pill mt-1"><i class="bi bi-building me-1"></i><?= htmlspecialchars($kelas_siswa) ?></span>
-                </div>
-            </div>
-        </div>
-    </nav>
+    <?php include 'komponen_navbar.php'; ?>
 
     <div class="container-fluid px-0 flex-grow-1">
         <div class="row g-0">
-            <nav class="col-md-3 col-lg-2 d-none d-md-block sidebar">
-                <div class="position-sticky top-0">
-                    <div class="text-muted small fw-bold mb-3 px-3 uppercase" style="letter-spacing: 1px;">MENU AKADEMIK</div>
-                    <ul class="nav flex-column">
-                        <li class="nav-item"><a class="nav-link" href="siswa.php"><i class="bi bi-grid-1x2-fill me-3 fs-5 align-middle"></i> Dashboard</a></li>
-                        <li class="nav-item"><a class="nav-link" href="kalender.php"><i class="bi bi-calendar2-week-fill me-3 fs-5 align-middle"></i> Jadwal & Agenda</a></li>
-                    </ul>
-                </div>
-            </nav>
+            <?php include 'komponen_sidebar.php'; ?>
 
             <main class="col-md-9 ms-sm-auto col-lg-10 px-4 py-4 pb-5">
                 
@@ -102,12 +94,12 @@ $query_tugas = mysqli_query($koneksi, "
                             <div class="task-info">
                                 <h5 class="fw-bold text-dark mb-1"><?= htmlspecialchars($tgs['Judul']) ?></h5>
                                 <div class="d-flex gap-3 align-items-center text-muted small mt-2">
-                                    <span><i class="bi bi-journal-bookmark-fill text-primary me-1"></i> <?= htmlspecialchars($tgs['NamaMapel']) ?></span>
+                                    <span><i class="bi bi-journal-bookmark-fill text-secondary me-1"></i> <?= htmlspecialchars($tgs['NamaMapel']) ?></span>
                                     <span><i class="bi bi-calendar-check me-1"></i> Dikumpul: <?= date('d M, H:i', strtotime($tgs['TanggalKirim'])) ?></span>
                                     <span class="badge bg-warning text-dark"><i class="bi bi-star-fill me-1"></i> Nilai: <?= $tgs['Nilai'] ?? 'Belum Dinilai' ?></span>
                                 </div>
                             </div>
-                            <a href="mapel.php?id_mapel=<?= urlencode($tgs['IDMapel']) ?>&open_tugas=<?= $tgs['IDTugas'] ?>" class="btn-go text-decoration-none">
+                            <a href="mapel.php?id_mapel=<?= urlencode($tgs['IDMapel']) ?>&open_tugas=<?= $tgs['IDTugas'] ?>" class="btn-go">
                                 Lihat Detail <i class="bi bi-arrow-right-short ms-1"></i>
                             </a>
                         </div>
@@ -117,6 +109,6 @@ $query_tugas = mysqli_query($koneksi, "
             </main>
         </div>
     </div>
-
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
