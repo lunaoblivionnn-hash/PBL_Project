@@ -103,8 +103,11 @@ $total_soal = count($semua_soal);
 
         /* SIDEBAR NAVIGASI SOAL */
         .nav-grid-card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.02); border: 1px solid #e2e8f0; position: sticky; top: 100px; }
-        .nav-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
-        .btn-nav-soal { width: 100%; aspect-ratio: 1; border-radius: 8px; font-weight: 700; display: flex; justify-content: center; align-items: center; border: 2px solid #cbd5e1; background: #fff; color: #64748b; transition: 0.2s; padding: 0;}
+        
+        /* ++ CSS YANG BARU UNTUK MENGECILKAN TOMBOL ++ */
+        .nav-grid { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+        .btn-nav-soal { width: 42px; height: 42px; border-radius: 8px; font-weight: 700; display: flex; justify-content: center; align-items: center; border: 2px solid #cbd5e1; background: #fff; color: #64748b; transition: 0.2s; padding: 0; }
+        
         .btn-nav-soal:hover { border-color: var(--primary); color: var(--primary); }
         .btn-nav-soal.answered { background: #10b981; color: white; border-color: #10b981; }
         .btn-nav-soal.doubt { background: #f59e0b; color: white; border-color: #f59e0b; }
